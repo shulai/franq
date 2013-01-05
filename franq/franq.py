@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
+from PyQt4.QtGui import QPainter, QPrinter
 
 class Report(object):
+
+    title = None
+    header = None
+    detail = None
+    footer = None
+    summary = None
 
     properties = {}
     
