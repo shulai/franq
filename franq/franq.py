@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtCore import QPointF
-from PyQt4.QtGui import QPainter, QPrinter
+import sip
+sip.setapi("QString", 2)
+
+from PyQt4.QtCore import QPointF, QRectF, QSizeF
+from PyQt4.QtGui import QPainter, QPrinter, QColor, QFont, QTextOption
 
 class BaseElement(object):
     border = None
@@ -9,31 +12,37 @@ class BaseElement(object):
     font = None
     pen = None
 
+    def __init__(self, **kw):
+        for key, value in kw.items():
+            self.__dict__[key] = value
+
     def _renderSetup(self, painter):
-        if self.font:
+        if self.font:           
             self.__parent_font = painter.font()
-            painter.setFont(self.font)
+            font = QFont(self.font)
+            font.setPointSizeF(self.font.pointSizeF() * 25.4/72.0)
+            painter.setFont(font)
         if self.pen:
-            self.__parent_pen = painter.font()
-            painter.setFont(self.font)
+            self.__parent_pen = painter.pen()
+            painter.setPen(self.pen)
 
     def _renderTearDown(self, painter):
         if self.font:
             painter.setFont(self.__parent_font)
         if self.pen:
-            painter.setFont(self.__parent_pen)
+            painter.setPen(self.__parent_pen)
 
     def _renderBorderAndBackground(self, painter, rect):
         if self.background:
             painter.fillRect(rect, self.background)
         if not self.border:
             return
-        if len(self.border) == 1:
-            border = (self.border,) * 4
-        elif len(self.border) != 4:
-            raise ValueError('Invalid border')
-        else:
+        try:
+            if len(self.border) != 4:
+                raise ValueError('Invalid border')
             border = self.border
+        except TypeError:
+            border = (self.border,) * 4
         
         pen = painter.pen()
         painter.setPen(border[0])
@@ -55,7 +64,10 @@ class Report(BaseElement):
     footer = None
     summary = None
 
-    print_if_empty = True
+    paperSize = QPrinter.A4
+    margins = (10, 10, 10, 10)
+    printIfEmpty = True
+    font = QFont("Helvetica", 10)
     
     def __init__(self, properties=None, title=None, header=None, detail=None, 
             footer=None, summary=None):
@@ -87,30 +99,43 @@ class Report(BaseElement):
 
     def render(self, printer, data=None):
 
+        data = iter(data)
         try:
             data_item = data.next()
         except (AttributeError, StopIteration):
-            if self.print_if_empty:
+            if self.printIfEmpty:
                 data_item = None
             else:
                 return
-               
+
+        printer.setPaperSize(self.paperSize)
+        printer.setPageMargins(self.margins[3], self.margins[0], self.margins[1], self.margins[2], QPrinter.Millimeter)
         painter = QPainter()
         painter.begin(printer)
+        scale = printer.resolution() * 3937.0 / 100000.0
+        painter.scale(scale, scale)
         self._renderSetup(painter)
-        self._renderBorderAndBackground(painter, printer.pageRect())
+        rect = printer.pageRect(QPrinter.Millimeter)
+        rect.moveTo(0.0, 0.0)
+        self._renderBorderAndBackground(painter, rect)
         self.page = 1
 
         y = 0.0
         pageHeight = printer.pageRect(QPrinter.Millimeter).height()
+        pageWidth = printer.pageRect(QPrinter.Millimeter).width()
         
         if self.title:
-            self.title.render(painter, y, data_item)
+            bandHeight = self.title.renderHeight(data_item)
+            rect = QRectF(0, y, pageWidth, bandHeight)
+            self.title.render(painter, rect, data_item)
             printer.newPage()
             self.page += 1
 
         if self.header:
-            self.header.render(painter, y, data_item)
+            bandHeight = self.header.renderHeight(data_item)
+            rect = QRectF(0, y, pageWidth, bandHeight)
+            self.header.render(painter, rect, data_item)
+            y += bandHeight
 
         if self.footer:
             footerHeight = self.footer.renderHeight()
@@ -122,16 +147,19 @@ class Report(BaseElement):
                 detailHeight = self.detail.renderHeight(data_item)
                 if y + detailHeight > pageHeight - footerHeight:
                     if self.footer:
-                        self.footer.render(painter)
+                        rect = QRectF(0, y, width, headerHeight)
+                        self.footer.render(painter, rect)
                     printer.newPage()
                     self.page += 1
                     y = 0.0
                     if self.header:
-                        headerHeight = self.header.rendeHeight()
-                        self.header.render(painter, y, data_item)
+                        headerHeight = self.header.renderHeight(data_item)
+                        rect = QRectF(0, y, pageWidth, headerHeight)
+                        self.header.render(painter, rect, data_item)
                         y += headerHeight
-                    
-                self.detail.render(painter, y, data_item)
+
+                rect = QRectF(0, y, pageWidth, detailHeight)
+                self.detail.render(painter, rect, data_item)
                 y += detailHeight
                 try:
                     data_item = data.next()
@@ -143,75 +171,88 @@ class Report(BaseElement):
         
         painter.end()
 
-class Band(object):
+class Band(BaseElement):
 
-    elements = [] 
+    height = 20
+    elements = []
+    child = None
+
     def renderHeight(self, data_item):
         height = self.height
         for element in self.elements:
-            elementBottom = element.y + element.renderHeight(data_item) 
+            elementBottom = element.top + element.renderHeight(data_item) 
             if elementBottom > height:
-                heigth = elementBottom
+                height = elementBottom
             if self.child:
-                heigth += self.child.renderHeigth(data_item)
-        return heigth
+                height += self.child.renderHeight(data_item)
+        return height
     
-    def render(self, painter, y, data_item=None):
+    def render(self, painter, rect, data_item=None):
         self._renderSetup(painter)
-        self._renderBorderAndBackground(painter, painter.pageRect())
+        self._renderBorderAndBackground(painter, rect)
         
         for element in self.elements:
-            self.render(painter, y, data_item)
+            element.render(painter, rect, data_item)
 
         self._renderTearDown(painter)
 
-class Element(object):
+class Element(BaseElement):
     
     def renderHeight(self, data_item):
-        return self.heigth
+        return self.height
     
-    def render(painter, y, data_item):
+    def render(painter, rect, data_item):
         pass # Stub
 
 
 class TextElement(Element):
 
+    textOptions = QTextOption()
+
     def renderHeight(self, data_item):
-        return self.heigth
+        return self.height
     
-    def _render(self, painter, y, text):
+    def _render(self, painter, rect, text):
         self._renderSetup(painter)
         self._renderBorderAndBackground(painter, rect)        
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
-        rect = painter.boundingRect()
+        elementRect = QRectF(QPointF(self.top, self.left) + rect.topLeft(), QSizeF(self.width, self.height))
         if self.font:
             painter.setFont(parent_font)
+        painter.drawText(elementRect, text, self.textOptions)
         self._renderTearDown(painter)
 
 
 class Label(TextElement):
     
-    def render(self, painter, y, data_item):
-
-        self._render(self, painter, y, self.text)
+    def render(self, painter, rect, data_item):
+        self._render(painter, rect, self.text)
 
 
 class Field(TextElement):
     
-    def render(self, painter, y, data_item):
-        self._render(self, painter, y, data_item.get(self.fieldName))
+    format = None
+
+    def render(self, painter, rect, data_item):
+        if self.format:
+            self._render(self, painter, rect, 
+                self.format.format(getattr(data_item, self.fieldName, 
+                    "<Error>")))
+        else:
+            self._render(painter, rect, getattr(data_item, 
+                self.fieldName, "<Error>"))
 
 
 class Function(TextElement):
     
-    def render(self, painter, y, data_item):
+    def render(self, painter, rect, data_item):
         value = self.func(data_item)
-        self._render(self, painter, y, value)
+        self._render(painter, rect, value)
 
 
 class Image(Element):
     
-    def render(painter, y, data_item):
+    def render(painter, rect, data_item):
         pass # Stub
