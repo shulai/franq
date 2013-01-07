@@ -4,17 +4,17 @@ import sip
 sip.setapi("QString", 2)
 
 from PyQt4 import QtGui
-from franq import Report, Band, Function
+from franq import Report, Band, Function, mm
 
 
 class DetailBandReport(Report):
     printIfEmpty = True
-    margin = (10, 10, 10, 25)
+    margin = (10 * mm, 10 * mm, 10 * mm, 25 * mm)
     detail = Band(
         border=QtGui.QColor("blue"),
-        height = 5,
+        height = 5 * mm,
         elements = [
-            Function(top=5, left=5, height=5, width=30, func=lambda x: x)
+            Function(top=0 * mm, left=5 * mm, height=5 * mm, width=30 * mm, func=lambda x: x)
             ])
 
 app = QtGui.QApplication([])

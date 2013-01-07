@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import sip
+sip.setapi("QString", 2)
+
 from PyQt4 import QtGui
 from franq import Report
 

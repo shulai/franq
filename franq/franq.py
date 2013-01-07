@@ -6,6 +6,8 @@ sip.setapi("QString", 2)
 from PyQt4.QtCore import QPointF, QRectF, QSizeF
 from PyQt4.QtGui import QPainter, QPrinter, QColor, QFont, QTextOption
 
+mm = 300 / 25.4
+
 class BaseElement(object):
     border = None
     background = None
@@ -19,9 +21,7 @@ class BaseElement(object):
     def _renderSetup(self, painter):
         if self.font:           
             self.__parent_font = painter.font()
-            font = QFont(self.font)
-            font.setPointSizeF(self.font.pointSizeF() * 25.4/72.0)
-            painter.setFont(font)
+            painter.setFont(self.font)
         if self.pen:
             self.__parent_pen = painter.pen()
             painter.setPen(self.pen)
@@ -45,14 +45,18 @@ class BaseElement(object):
             border = (self.border,) * 4
         
         pen = painter.pen()
-        painter.setPen(border[0])
-        painter.drawLine(rect.topLeft(), rect.topRight())
-        painter.setPen(border[1])
-        painter.drawLine(rect.topRight(), rect.bottomRight())
-        painter.setPen(border[2])
-        painter.drawLine(rect.bottomLeft(), rect.bottomRight())
-        painter.setPen(border[3])
-        painter.drawLine(rect.topLeft(), rect.bottomLeft())
+        if border[0]:
+            painter.setPen(border[0])
+            painter.drawLine(rect.topLeft(), rect.topRight())
+        if border[1]:
+            painter.setPen(border[1])
+            painter.drawLine(rect.topRight(), rect.bottomRight())
+        if border[2]:
+            painter.setPen(border[2])
+            painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+        if border[3]:
+            painter.setPen(border[3])
+            painter.drawLine(rect.topLeft(), rect.bottomLeft())
         painter.setPen(pen)
             
         
@@ -65,9 +69,8 @@ class Report(BaseElement):
     summary = None
 
     paperSize = QPrinter.A4
-    margins = (10, 10, 10, 10)
+    margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
     printIfEmpty = True
-    font = QFont("Helvetica", 10)
     
     def __init__(self, properties=None, title=None, header=None, detail=None, 
             footer=None, summary=None):
@@ -99,30 +102,29 @@ class Report(BaseElement):
 
     def render(self, printer, data=None):
 
-        data = iter(data)
         try:
+            data = iter(data)
             data_item = data.next()
-        except (AttributeError, StopIteration):
+        except (TypeError, StopIteration):
             if self.printIfEmpty:
                 data_item = None
             else:
                 return
 
+        printer.setResolution(300)
         printer.setPaperSize(self.paperSize)
-        printer.setPageMargins(self.margins[3], self.margins[0], self.margins[1], self.margins[2], QPrinter.Millimeter)
+        printer.setPageMargins(self.margins[3], self.margins[0], self.margins[1], self.margins[2], QPrinter.DevicePixel)
         painter = QPainter()
         painter.begin(printer)
-        scale = printer.resolution() * 3937.0 / 100000.0
-        painter.scale(scale, scale)
         self._renderSetup(painter)
-        rect = printer.pageRect(QPrinter.Millimeter)
+        rect = printer.pageRect()
         rect.moveTo(0.0, 0.0)
         self._renderBorderAndBackground(painter, rect)
         self.page = 1
 
         y = 0.0
-        pageHeight = printer.pageRect(QPrinter.Millimeter).height()
-        pageWidth = printer.pageRect(QPrinter.Millimeter).width()
+        pageHeight = printer.pageRect().height()
+        pageWidth = printer.pageRect().width()
         
         if self.title:
             bandHeight = self.title.renderHeight(data_item)
@@ -147,7 +149,7 @@ class Report(BaseElement):
                 detailHeight = self.detail.renderHeight(data_item)
                 if y + detailHeight > pageHeight - footerHeight:
                     if self.footer:
-                        rect = QRectF(0, y, width, headerHeight)
+                        rect = QRectF(0, y, pageWidth, footerHeight)
                         self.footer.render(painter, rect)
                     printer.newPage()
                     self.page += 1
@@ -168,7 +170,12 @@ class Report(BaseElement):
                     
         if self.summary:
             self.header.render(painter)
-        
+
+        if self.footer:
+            rect = QRectF(0, y, pageWidth, footerHeight)
+            self.footer.render(painter, rect)
+
+
         painter.end()
 
 class Band(BaseElement):
@@ -177,7 +184,7 @@ class Band(BaseElement):
     elements = []
     child = None
 
-    def renderHeight(self, data_item):
+    def renderHeight(self, data_item=None):
         height = self.height
         for element in self.elements:
             elementBottom = element.top + element.renderHeight(data_item) 
@@ -218,10 +225,10 @@ class TextElement(Element):
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
-        elementRect = QRectF(QPointF(self.top, self.left) + rect.topLeft(), QSizeF(self.width, self.height))
+        elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(), QSizeF(self.width, self.height))
         if self.font:
             painter.setFont(parent_font)
-        painter.drawText(elementRect, text, self.textOptions)
+        painter.drawText(elementRect, unicode(text), self.textOptions)
         self._renderTearDown(painter)
 
 
@@ -252,7 +259,21 @@ class Function(TextElement):
         self._render(painter, rect, value)
 
 
-class Image(Element):
-    
+class Line(Element):
+
     def render(painter, rect, data_item):
         pass # Stub
+
+
+class Image(Element):
+    
+    fileName = None
+    pixmap = None
+    
+    def render(painter, rect, data_item):
+        if not self.pixmap:
+            if self.fileName:
+                self.pixmap = QPixmap(self.pixmap)
+                
+            painter.drawPixmap(QPointF(self.left, self.top), self.pixmap,
+                self.pixmap.rect())
