@@ -145,9 +145,26 @@ class Report(BaseElement):
             footerHeight = 0
 
         if self.detail is not None and data_item is not None:
+
+            if self.detail.header:
+                bandHeight = self.detail.header.renderHeight(data_item)
+                rect = QRectF(0, y, pageWidth, bandHeight)
+                self.detail.header.render(painter, rect, data_item)
+                y += bandHeight
+
+            if self.detail.footer:
+                detailFooterHeight = self.detail.footer.renderHeight()
+           else:
+                detailFooterHeight = 0.0
+
+            maxDetailHeight = pageHeight - footerHeight - detailFooterHeight
+
             while True:
                 detailHeight = self.detail.renderHeight(data_item)
-                if y + detailHeight > pageHeight - footerHeight:
+                if y + detailHeight > maxDetailHeight:
+                    if self.detail.footer:
+                        rect = QRectF(0, y, pageWidth, detailfooterHeight)
+                        self.detail.footer.render(painter, rect)
                     if self.footer:
                         rect = QRectF(0, y, pageWidth, footerHeight)
                         self.footer.render(painter, rect)
@@ -177,6 +194,7 @@ class Report(BaseElement):
 
 
         painter.end()
+
 
 class Band(BaseElement):
 
@@ -210,7 +228,12 @@ class DetailBand(BaseElement):
     columnSpace = 0.0
     groups = []
 
+    header = None
+    footer = None
 
+    def render(self, painter, rect, data_item=None):
+
+        	
 class DetailGroup(object):
     
     expression = None
