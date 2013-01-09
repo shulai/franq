@@ -203,6 +203,21 @@ class Band(BaseElement):
 
         self._renderTearDown(painter)
 
+
+class DetailBand(BaseElement):
+    
+    columns = 1
+    columnSpace = 0.0
+    groups = []
+
+
+class DetailGroup(object):
+    
+    expression = None
+    header = None
+    footer = None
+
+
 class Element(BaseElement):
     
     def renderHeight(self, data_item):
