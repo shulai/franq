@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import json
 
 # Import Qt modules
 import sip
@@ -11,12 +12,9 @@ sip.setapi('QTime', 2)
 sip.setapi('QVariant', 2)
 
 from PyQt4 import QtGui
+from model import DesignerModel
 
-
-class DesignerModel(object):
-
-    def __init__(self, filename=None):
-        self.filename = filename
+mm = 300 / 25.4
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -36,10 +34,10 @@ class DesignerApp(QtGui.QApplication):
             filename = (arg for arg in argv[1:] if arg[0] != '-').next()
         except StopIteration:
             filename = None
-        self.model = DesignerModel(filename)
+        self.main_window = MainWindow()
+        self.model = DesignerModel(self.main_window.ui.centralwidget, filename)
 
     def exec_(self):
-        self.main_window = MainWindow()
         self.main_window.show()
         super(QtGui.QApplication, self).exec_()
 
