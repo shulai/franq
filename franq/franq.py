@@ -65,7 +65,7 @@ class BaseElement(object):
 
 class Report(BaseElement):
 
-    title = None
+    begin = None
     header = None
     detail = None
     footer = None
@@ -75,14 +75,14 @@ class Report(BaseElement):
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
     printIfEmpty = False
 
-    def __init__(self, properties=None, title=None, header=None, detail=None,
+    def __init__(self, properties=None, begin=None, header=None, detail=None,
             footer=None, summary=None):
 
         if properties:
             self.properties = properties
 
-        if title:
-            self.title = title
+        if begin:
+            self.begin = begin
         if header:
             self.header = header
         if detail:
@@ -92,8 +92,8 @@ class Report(BaseElement):
         if summary:
             self.summary = summary
 
-        if self.title is not None and not isinstance(self.title, Band):
-            self.title = self.title()
+        if self.begin is not None and not isinstance(self.begin, Band):
+            self.begin = self.begin()
         if self.header is not None and not isinstance(self.header, Band):
             self.header = self.header()
         if self.detail is not None and not isinstance(self.detail, Band):
@@ -130,10 +130,10 @@ class Report(BaseElement):
         pageHeight = printer.pageRect().height()
         pageWidth = printer.pageRect().width()
 
-        if self.title:
-            bandHeight = self.title.renderHeight(data_item)
+        if self.begin:
+            bandHeight = self.begin.renderHeight(data_item)
             rect = QRectF(0, y, pageWidth, bandHeight)
-            self.title.render(painter, rect, data_item)
+            self.begin.render(painter, rect, data_item)
             printer.newPage()
             self.page += 1
 
