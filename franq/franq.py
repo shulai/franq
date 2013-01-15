@@ -6,7 +6,9 @@ sip.setapi("QString", 2)
 from PyQt4.QtCore import QPointF, QRectF, QSizeF
 from PyQt4.QtGui import QPainter, QPrinter, QColor, QFont, QTextOption, QPixmap
 
+inch = 300
 mm = 300 / 25.4
+cm = 300 / 2.54
 
 
 class BaseElement(object):
