@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import json
 
 # Import Qt modules
 import sip
@@ -13,8 +12,6 @@ sip.setapi('QVariant', 2)
 
 from PyQt4 import QtGui
 from model import DesignerModel
-
-mm = 300 / 25.4
 
 
 class MainWindow(QtGui.QMainWindow):
