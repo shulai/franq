@@ -4,9 +4,10 @@ import sip
 sip.setapi("QString", 2)
 
 from PyQt4.QtCore import QPointF, QRectF, QSizeF
-from PyQt4.QtGui import QPainter, QPrinter, QColor, QFont, QTextOption
+from PyQt4.QtGui import QPainter, QPrinter, QColor, QFont, QTextOption, QPixmap
 
 mm = 300 / 25.4
+
 
 class BaseElement(object):
     border = None
@@ -113,7 +114,8 @@ class Report(BaseElement):
 
         printer.setResolution(300)
         printer.setPaperSize(self.paperSize)
-        printer.setPageMargins(self.margins[3], self.margins[0], self.margins[1], self.margins[2], QPrinter.DevicePixel)
+        printer.setPageMargins(self.margins[3], self.margins[0],
+            self.margins[1], self.margins[2], QPrinter.DevicePixel)
         painter = QPainter()
         painter.begin(printer)
         self._renderSetup(painter)
@@ -175,8 +177,8 @@ class Report(BaseElement):
             rect = QRectF(0, y, pageWidth, footerHeight)
             self.footer.render(painter, rect)
 
-
         painter.end()
+
 
 class Band(BaseElement):
 
@@ -224,7 +226,7 @@ class Element(BaseElement):
         return self.height
 
     def render(painter, rect, data_item):
-        pass # Stub
+        pass  # Stub
 
 
 class TextElement(Element):
@@ -240,7 +242,8 @@ class TextElement(Element):
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
-        elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(), QSizeF(self.width, self.height))
+        elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(),
+            QSizeF(self.width, self.height))
         if self.font:
             painter.setFont(parent_font)
         painter.drawText(elementRect, unicode(text), self.textOptions)
@@ -277,7 +280,7 @@ class Function(TextElement):
 class Line(Element):
 
     def render(painter, rect, data_item):
-        pass # Stub
+        pass  # Stub
 
 
 class Image(Element):
@@ -285,7 +288,7 @@ class Image(Element):
     fileName = None
     pixmap = None
 
-    def render(painter, rect, data_item):
+    def render(self, painter, rect, data_item):
         if not self.pixmap:
             if self.fileName:
                 self.pixmap = QPixmap(self.pixmap)
