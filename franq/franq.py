@@ -73,7 +73,7 @@ class Report(BaseElement):
 
     paperSize = QPrinter.A4
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
-    printIfEmpty = True
+    printIfEmpty = False
 
     def __init__(self, properties=None, title=None, header=None, detail=None,
             footer=None, summary=None):
@@ -184,7 +184,7 @@ class Report(BaseElement):
 
 class Band(BaseElement):
 
-    height = 20
+    height = 20 * mm
     elements = []
     child = None
 
@@ -199,11 +199,17 @@ class Band(BaseElement):
         return height
 
     def render(self, painter, rect, data_item=None):
+        band_rect = QRectF(0, rect.top(), rect.width(), self.height)
         self._renderSetup(painter)
-        self._renderBorderAndBackground(painter, rect)
+        self._renderBorderAndBackground(painter, band_rect)
 
         for element in self.elements:
-            element.render(painter, rect, data_item)
+            element.render(painter, band_rect, data_item)
+
+        if self.child:
+            child_rect = QRectF(0, self.height, rect.width(),
+                rect.height() - self.height)
+            self.child.render(painter, child_rect, data_item)
 
         self._renderTearDown(painter)
 

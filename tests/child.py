@@ -7,7 +7,7 @@ from PyQt4 import QtGui
 from franq import Report, Band, Label, mm
 
 
-class TitleBandReport(Report):
+class TitleAndChildReport(Report):
 
     printIfEmpty = True
     background = QtGui.QBrush(QtGui.QColor("cyan"))
@@ -17,12 +17,18 @@ class TitleBandReport(Report):
         elements=[
             Label(top=5 * mm, left=5 * mm, height=5 * mm, width=30 * mm,
                 text=u"Hello World")
-            ])
+            ],
+        child=Band(
+            background=QtGui.QBrush(QtGui.QColor(255, 255, 223)),
+            elements=[
+                Label(top=5 * mm, left=15 * mm, height=5 * mm, width=30 * mm,
+                    text=u"Hello Child")
+            ],
+))
 
 app = QtGui.QApplication([])
 
-r = TitleBandReport()
-
+r = TitleAndChildReport()
 printer = QtGui.QPrinter()
-printer.setOutputFileName('title.pdf')
+printer.setOutputFileName('child.pdf')
 r.render(printer, None)

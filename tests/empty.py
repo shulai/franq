@@ -12,7 +12,7 @@ class EmptyReport(Report):
 app = QtGui.QApplication([])
 
 r = Report()
-r.printIfEmpty = True
+r.printIfEmpty = False
 
 printer = QtGui.QPrinter()
 printer.setOutputFileName('empty1.pdf')
