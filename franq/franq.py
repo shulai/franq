@@ -19,7 +19,7 @@ class BaseElement(object):
             self.__dict__[key] = value
 
     def _renderSetup(self, painter):
-        if self.font:           
+        if self.font:
             self.__parent_font = painter.font()
             painter.setFont(self.font)
         if self.pen:
@@ -43,7 +43,7 @@ class BaseElement(object):
             border = self.border
         except TypeError:
             border = (self.border,) * 4
-        
+
         pen = painter.pen()
         if border[0]:
             painter.setPen(border[0])
@@ -58,8 +58,8 @@ class BaseElement(object):
             painter.setPen(border[3])
             painter.drawLine(rect.topLeft(), rect.bottomLeft())
         painter.setPen(pen)
-            
-        
+
+
 class Report(BaseElement):
 
     title = None
@@ -71,15 +71,15 @@ class Report(BaseElement):
     paperSize = QPrinter.A4
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
     printIfEmpty = True
-    
-    def __init__(self, properties=None, title=None, header=None, detail=None, 
+
+    def __init__(self, properties=None, title=None, header=None, detail=None,
             footer=None, summary=None):
-                
+
         if properties:
             self.properties = properties
 
         if title:
-            self.title = title        
+            self.title = title
         if header:
             self.header = header
         if detail:
@@ -125,7 +125,7 @@ class Report(BaseElement):
         y = 0.0
         pageHeight = printer.pageRect().height()
         pageWidth = printer.pageRect().width()
-        
+
         if self.title:
             bandHeight = self.title.renderHeight(data_item)
             rect = QRectF(0, y, pageWidth, bandHeight)
@@ -167,7 +167,7 @@ class Report(BaseElement):
                     data_item = data.next()
                 except StopIteration:
                     break
-                    
+
         if self.summary:
             self.header.render(painter)
 
@@ -187,17 +187,17 @@ class Band(BaseElement):
     def renderHeight(self, data_item=None):
         height = self.height
         for element in self.elements:
-            elementBottom = element.top + element.renderHeight(data_item) 
+            elementBottom = element.top + element.renderHeight(data_item)
             if elementBottom > height:
                 height = elementBottom
             if self.child:
                 height += self.child.renderHeight(data_item)
         return height
-    
+
     def render(self, painter, rect, data_item=None):
         self._renderSetup(painter)
         self._renderBorderAndBackground(painter, rect)
-        
+
         for element in self.elements:
             element.render(painter, rect, data_item)
 
@@ -205,24 +205,24 @@ class Band(BaseElement):
 
 
 class DetailBand(BaseElement):
-    
+
     columns = 1
     columnSpace = 0.0
     groups = []
 
 
 class DetailGroup(object):
-    
+
     expression = None
     header = None
     footer = None
 
 
 class Element(BaseElement):
-    
+
     def renderHeight(self, data_item):
         return self.height
-    
+
     def render(painter, rect, data_item):
         pass # Stub
 
@@ -233,10 +233,10 @@ class TextElement(Element):
 
     def renderHeight(self, data_item):
         return self.height
-    
+
     def _render(self, painter, rect, text):
         self._renderSetup(painter)
-        self._renderBorderAndBackground(painter, rect)        
+        self._renderBorderAndBackground(painter, rect)
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
@@ -248,27 +248,27 @@ class TextElement(Element):
 
 
 class Label(TextElement):
-    
+
     def render(self, painter, rect, data_item):
         self._render(painter, rect, self.text)
 
 
 class Field(TextElement):
-    
+
     format = None
 
     def render(self, painter, rect, data_item):
         if self.format:
-            self._render(self, painter, rect, 
-                self.format.format(getattr(data_item, self.fieldName, 
+            self._render(self, painter, rect,
+                self.format.format(getattr(data_item, self.fieldName,
                     "<Error>")))
         else:
-            self._render(painter, rect, getattr(data_item, 
+            self._render(painter, rect, getattr(data_item,
                 self.fieldName, "<Error>"))
 
 
 class Function(TextElement):
-    
+
     def render(self, painter, rect, data_item):
         value = self.func(data_item)
         self._render(painter, rect, value)
@@ -281,14 +281,14 @@ class Line(Element):
 
 
 class Image(Element):
-    
+
     fileName = None
     pixmap = None
-    
+
     def render(painter, rect, data_item):
         if not self.pixmap:
             if self.fileName:
                 self.pixmap = QPixmap(self.pixmap)
-                
+
             painter.drawPixmap(QPointF(self.left, self.top), self.pixmap,
                 self.pixmap.rect())
