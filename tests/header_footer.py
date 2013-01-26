@@ -5,7 +5,7 @@ sip.setapi("QString", 2)
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
-from franq import Report, Band, Label, Function, mm
+from franq import Report, Band, DetailBand, Label, Function, mm
 
 
 class DetailBandReport(Report):
@@ -20,7 +20,7 @@ class DetailBandReport(Report):
                 text=u"Header - Title",
                 textOptions=QtGui.QTextOption(Qt.AlignCenter))
             ])
-    detail = Band(
+    detail = DetailBand(
         height=5 * mm,
         elements=[
             Function(top=0 * mm, left=0 * mm, height=5 * mm, width=30 * mm,
