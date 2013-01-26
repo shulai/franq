@@ -138,10 +138,10 @@ class Report(BaseElement):
             self.page += 1
 
         if self.header:
-            bandHeight = self.header.renderHeight(data_item)
-            rect = QRectF(0, y, pageWidth, bandHeight)
+            headerHeight = self.header.renderHeight(data_item)
+            rect = QRectF(0, y, pageWidth, headerHeight)
             self.header.render(painter, rect, data_item)
-            y += bandHeight
+            y += headerHeight
 
         if self.footer:
             footerHeight = self.footer.renderHeight()
@@ -149,22 +149,33 @@ class Report(BaseElement):
             footerHeight = 0
 
         if self.detail is not None and data_item is not None:
+            column = 0
+            x = 0
+            columnWidth = (pageWidth - self.detail.columnSpace *
+                (self.detail.columns - 1)) / self.detail.columns
             while True:
                 detailHeight = self.detail.renderHeight(data_item)
-                if y + detailHeight > pageHeight - footerHeight:
-                    if self.footer:
-                        rect = QRectF(0, y, pageWidth, footerHeight)
-                        self.footer.render(painter, rect)
-                    printer.newPage()
-                    self.page += 1
-                    y = 0.0
-                    if self.header:
-                        headerHeight = self.header.renderHeight(data_item)
-                        rect = QRectF(0, y, pageWidth, headerHeight)
-                        self.header.render(painter, rect, data_item)
-                        y += headerHeight
 
-                rect = QRectF(0, y, pageWidth, detailHeight)
+                if y + detailHeight > pageHeight - footerHeight:
+                    column += 1
+                    x += columnWidth + self.detail.columnSpace
+                    if column < self.detail.columns:
+                        y = headerHeight
+                    else:
+                        if self.footer:
+                            rect = QRectF(0, y, pageWidth, footerHeight)
+                            self.footer.render(painter, rect)
+                        printer.newPage()
+                        self.page += 1
+                        y = 0.0
+                        if self.header:
+                            headerHeight = self.header.renderHeight(data_item)
+                            rect = QRectF(0, y, pageWidth, headerHeight)
+                            self.header.render(painter, rect, data_item)
+                            y += headerHeight
+                        column = 0
+
+                rect = QRectF(x, y, columnWidth, detailHeight)
                 self.detail.render(painter, rect, data_item)
                 y += detailHeight
                 try:
@@ -199,7 +210,7 @@ class Band(BaseElement):
         return height
 
     def render(self, painter, rect, data_item=None):
-        band_rect = QRectF(0, rect.top(), rect.width(), self.height)
+        band_rect = QRectF(rect.left(), rect.top(), rect.width(), self.height)
         self._renderSetup(painter)
         self._renderBorderAndBackground(painter, band_rect)
 
@@ -207,14 +218,14 @@ class Band(BaseElement):
             element.render(painter, band_rect, data_item)
 
         if self.child:
-            child_rect = QRectF(0, self.height, rect.width(),
+            child_rect = QRectF(rect.left(), self.height, rect.width(),
                 rect.height() - self.height)
             self.child.render(painter, child_rect, data_item)
 
         self._renderTearDown(painter)
 
 
-class DetailBand(BaseElement):
+class DetailBand(Band):
 
     columns = 1
     columnSpace = 0.0
