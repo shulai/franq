@@ -74,6 +74,7 @@ class Report(BaseElement):
     paperSize = QPrinter.A4
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
     printIfEmpty = False
+    headerInFirstPage = True
 
     def __init__(self, properties=None, begin=None, header=None, detail=None,
             footer=None, summary=None):
@@ -103,6 +104,12 @@ class Report(BaseElement):
         if self.summary is not None and not isinstance(self.summary, Band):
             self.summary = self.summary()
 
+    def _printerSetup(self, printer):
+        printer.setResolution(300)
+        printer.setPaperSize(self.paperSize)
+        printer.setPageMargins(self.margins[3], self.margins[0],
+            self.margins[1], self.margins[2], QPrinter.DevicePixel)
+
     def render(self, printer, data=None):
 
         try:
@@ -114,10 +121,7 @@ class Report(BaseElement):
             else:
                 return
 
-        printer.setResolution(300)
-        printer.setPaperSize(self.paperSize)
-        printer.setPageMargins(self.margins[3], self.margins[0],
-            self.margins[1], self.margins[2], QPrinter.DevicePixel)
+        self._printerSetup(printer)
         painter = QPainter()
         painter.begin(printer)
         self._renderSetup(painter)
@@ -130,18 +134,18 @@ class Report(BaseElement):
         pageHeight = printer.pageRect().height()
         pageWidth = printer.pageRect().width()
 
+        if self.header and self.headerInFirstPage:
+            headerHeight = self.header.renderHeight(data_item)
+            rect = QRectF(0, y, pageWidth, headerHeight)
+            self.header.render(painter, rect, data_item)
+            y += headerHeight
+
         if self.begin:
             bandHeight = self.begin.renderHeight(data_item)
             rect = QRectF(0, y, pageWidth, bandHeight)
             self.begin.render(painter, rect, data_item)
             printer.newPage()
             self.page += 1
-
-        if self.header:
-            headerHeight = self.header.renderHeight(data_item)
-            rect = QRectF(0, y, pageWidth, headerHeight)
-            self.header.render(painter, rect, data_item)
-            y += headerHeight
 
         if self.footer:
             footerHeight = self.footer.renderHeight()
@@ -184,7 +188,9 @@ class Report(BaseElement):
                     break
 
         if self.summary:
-            self.header.render(painter)
+            summaryHeight = self.summary.renderHeight()
+            rect = QRectF(x, y, columnWidth, summaryHeight)
+            self.summary.render(painter, rect)
 
         if self.footer:
             rect = QRectF(0, y, pageWidth, footerHeight)
