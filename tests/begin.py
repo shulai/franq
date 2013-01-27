@@ -7,11 +7,11 @@ from PyQt4 import QtGui
 from franq import Report, Band, Label, mm
 
 
-class TitleBandReport(Report):
+class BeginBandReport(Report):
 
     printIfEmpty = True
     background = QtGui.QBrush(QtGui.QColor("cyan"))
-    title = Band(
+    begin = Band(
         border=QtGui.QColor("blue"),
         background=QtGui.QBrush(QtGui.QColor("white")),
         elements=[
@@ -21,8 +21,8 @@ class TitleBandReport(Report):
 
 app = QtGui.QApplication([])
 
-r = TitleBandReport()
+r = BeginBandReport()
 
 printer = QtGui.QPrinter()
-printer.setOutputFileName('title.pdf')
+printer.setOutputFileName('begin.pdf')
 r.render(printer, None)
