@@ -21,7 +21,7 @@ class BaseElement(object):
         for key, value in kw.items():
             self.__dict__[key] = value
 
-    def _renderSetup(self, painter):
+    def renderSetup(self, painter):
         if self.font:
             self.__parent_font = painter.font()
             painter.setFont(self.font)
@@ -29,13 +29,13 @@ class BaseElement(object):
             self.__parent_pen = painter.pen()
             painter.setPen(self.pen)
 
-    def _renderTearDown(self, painter):
+    def renderTearDown(self, painter):
         if self.font:
             painter.setFont(self.__parent_font)
         if self.pen:
             painter.setPen(self.__parent_pen)
 
-    def _renderBorderAndBackground(self, painter, rect):
+    def renderBorderAndBackground(self, painter, rect):
         if self.background:
             painter.fillRect(rect, self.background)
         if not self.border:
@@ -134,8 +134,6 @@ class ReportRenderer(object):
         rpt = self._report
         if rpt.header is None:
             return
-        if self.page == 1 and not rpt.headerInFirstPage:
-            return
         height = rpt.header.renderHeight(self.__data_item)
         rect = QRectF(0, self.__y, self.__pageWidth, height)
         rpt.header.render(self.__painter, rect, self.__data_item)
@@ -184,18 +182,20 @@ class ReportRenderer(object):
         self.__painter = QPainter()
         self.__painter.begin(printer)
 
-        rpt._renderSetup(self.__painter)  # Fix visibility
+        rpt.renderSetup(self.__painter)
         rect = printer.pageRect()
         rect.moveTo(0.0, 0.0)
 
-        rpt._renderBorderAndBackground(self.__painter, rect)  # Fix visibility
+        rpt.renderBorderAndBackground(self.__painter, rect)
         self.page = 1
+        self.lastPage = False
 
         self.__y = 0.0
         self.__pageHeight = printer.pageRect().height()
         self.__pageWidth = printer.pageRect().width()
 
-        self._printHeader()
+        if rpt.headerInFirstPage:
+            self._printHeader()
         self._printBegin()
 
         detailTop = self.__y
@@ -262,8 +262,8 @@ class Band(BaseElement):
 
     def render(self, painter, rect, data_item=None):
         band_rect = QRectF(rect.left(), rect.top(), rect.width(), self.height)
-        self._renderSetup(painter)
-        self._renderBorderAndBackground(painter, band_rect)
+        self.renderSetup(painter)
+        self.renderBorderAndBackground(painter, band_rect)
 
         for element in self.elements:
             element.render(painter, band_rect, data_item)
@@ -273,7 +273,7 @@ class Band(BaseElement):
                 rect.height() - self.height)
             self.child.render(painter, child_rect, data_item)
 
-        self._renderTearDown(painter)
+        self.renderTearDown(painter)
 
 
 class DetailBand(Band):
@@ -282,6 +282,8 @@ class DetailBand(Band):
     columnSpace = 0.0
     groups = []
     forceNewColumn = False
+    columnHeader = None
+    columnFooter = None
 
 
 class DetailGroup(object):
@@ -308,8 +310,8 @@ class TextElement(Element):
         return self.height
 
     def _render(self, painter, rect, text):
-        self._renderSetup(painter)
-        self._renderBorderAndBackground(painter, rect)
+        self.renderSetup(painter)
+        self.renderBorderAndBackground(painter, rect)
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
@@ -318,7 +320,7 @@ class TextElement(Element):
         if self.font:
             painter.setFont(parent_font)
         painter.drawText(elementRect, unicode(text), self.textOptions)
-        self._renderTearDown(painter)
+        self.renderTearDown(painter)
 
 
 class Label(TextElement):
