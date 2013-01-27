@@ -104,19 +104,34 @@ class Report(BaseElement):
         if self.summary is not None and not isinstance(self.summary, Band):
             self.summary = self.summary()
 
-    def _printerSetup(self, printer):
-        printer.setResolution(300)
-        printer.setPaperSize(self.paperSize)
-        printer.setPageMargins(self.margins[3], self.margins[0],
-            self.margins[1], self.margins[2], QPrinter.DevicePixel)
-
     def render(self, printer, data=None):
 
+        renderer = ReportRenderer(self)
+        renderer.render(printer, data)
+
+
+class ReportRenderer(object):
+
+    def __init__(self, report):
+        self._report = report
+
+    def _printerSetup(self, printer):
+        rpt = self._report
+        printer.setResolution(300)
+        printer.setPaperSize(rpt.paperSize)
+        printer.setPageMargins(
+            rpt.margins[3], rpt.margins[0],
+            rpt.margins[1], rpt.margins[2],
+            QPrinter.DevicePixel)
+
+    def render(self, printer, data):
+
+        rpt = self._report
         try:
             data = iter(data)
             data_item = data.next()
         except (TypeError, StopIteration):
-            if self.printIfEmpty:
+            if rpt.printIfEmpty:
                 data_item = None
             else:
                 return
@@ -124,77 +139,81 @@ class Report(BaseElement):
         self._printerSetup(printer)
         painter = QPainter()
         painter.begin(printer)
-        self._renderSetup(painter)
+        rpt._renderSetup(painter)
         rect = printer.pageRect()
         rect.moveTo(0.0, 0.0)
-        self._renderBorderAndBackground(painter, rect)
+        #hasta aca
+        rpt._renderBorderAndBackground(painter, rect)
         self.page = 1
 
         y = 0.0
         pageHeight = printer.pageRect().height()
         pageWidth = printer.pageRect().width()
 
-        if self.header and self.headerInFirstPage:
-            headerHeight = self.header.renderHeight(data_item)
+        if rpt.header and rpt.headerInFirstPage:
+            headerHeight = rpt.header.renderHeight(data_item)
             rect = QRectF(0, y, pageWidth, headerHeight)
-            self.header.render(painter, rect, data_item)
+            rpt.header.render(painter, rect, data_item)
             y += headerHeight
 
-        if self.begin:
-            bandHeight = self.begin.renderHeight(data_item)
+        if rpt.begin:
+            bandHeight = rpt.begin.renderHeight(data_item)
             rect = QRectF(0, y, pageWidth, bandHeight)
-            self.begin.render(painter, rect, data_item)
+            rpt.begin.render(painter, rect, data_item)
             printer.newPage()
             self.page += 1
 
-        if self.footer:
-            footerHeight = self.footer.renderHeight()
+        if rpt.footer:
+            footerHeight = rpt.footer.renderHeight()
         else:
             footerHeight = 0
 
-        if self.detail is not None and data_item is not None:
+        if rpt.detail is not None and data_item is not None:
             column = 0
             x = 0
-            columnWidth = (pageWidth - self.detail.columnSpace *
-                (self.detail.columns - 1)) / self.detail.columns
+            columnWidth = (pageWidth - rpt.detail.columnSpace *
+                (rpt.detail.columns - 1)) / rpt.detail.columns
             while True:
-                detailHeight = self.detail.renderHeight(data_item)
+                detailHeight = rpt.detail.renderHeight(data_item)
 
                 if y + detailHeight > pageHeight - footerHeight:
                     column += 1
-                    x += columnWidth + self.detail.columnSpace
-                    if column < self.detail.columns:
+                    x += columnWidth + rpt.detail.columnSpace
+                    if column < rpt.detail.columns:
                         y = headerHeight
                     else:
-                        if self.footer:
+                        if rpt.footer:
+                            y = pageHeight - footerHeight
                             rect = QRectF(0, y, pageWidth, footerHeight)
-                            self.footer.render(painter, rect)
+                            rpt.footer.render(painter, rect)
                         printer.newPage()
                         self.page += 1
                         y = 0.0
-                        if self.header:
-                            headerHeight = self.header.renderHeight(data_item)
+                        if rpt.header:
+                            headerHeight = rpt.header.renderHeight(data_item)
                             rect = QRectF(0, y, pageWidth, headerHeight)
-                            self.header.render(painter, rect, data_item)
+                            rpt.header.render(painter, rect, data_item)
                             y += headerHeight
                         column = 0
+                        x = 0
 
                 rect = QRectF(x, y, columnWidth, detailHeight)
-                self.detail.render(painter, rect, data_item)
+                rpt.detail.render(painter, rect, data_item)
                 y += detailHeight
                 try:
                     data_item = data.next()
                 except StopIteration:
                     break
 
-        if self.summary:
-            summaryHeight = self.summary.renderHeight()
+        if rpt.summary:
+            summaryHeight = rpt.summary.renderHeight()
             rect = QRectF(x, y, columnWidth, summaryHeight)
-            self.summary.render(painter, rect)
+            rpt.summary.render(painter, rect)
 
-        if self.footer:
+        if rpt.footer:
+            y = pageHeight - footerHeight
             rect = QRectF(0, y, pageWidth, footerHeight)
-            self.footer.render(painter, rect)
+            rpt.footer.render(painter, rect)
 
         painter.end()
 
