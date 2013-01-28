@@ -35,9 +35,12 @@ class BaseElement(object):
         if self.pen:
             painter.setPen(self.__parent_pen)
 
+    def _getBackground(self):
+        return self.background
+
     def renderBorderAndBackground(self, painter, rect):
         if self.background:
-            painter.fillRect(rect, self.background)
+            painter.fillRect(rect, self._getBackground())
         if not self.border:
             return
         try:
@@ -332,6 +335,15 @@ class DetailGroup(object):
     expression = None
     header = None
     footer = None
+
+    def __init__(self, expression=None, header=None, footer=None):
+       if expression:
+           self.expression = expression
+       if header:
+           self.header = header
+       if footer:
+           self.footer = footer
+       self._value = None
 
 
 class Element(BaseElement):
