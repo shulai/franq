@@ -65,6 +65,8 @@ class BaseElement(object):
 
 class Report(BaseElement):
 
+    title = None
+
     begin = None
     header = None
     detail = None
@@ -106,8 +108,9 @@ class Report(BaseElement):
 
     def render(self, printer, data=None):
 
-        renderer = ReportRenderer(self)
-        renderer.render(printer, data)
+        self.renderer = ReportRenderer(self)
+        self.renderer.render(printer, data)
+        self.renderer = None
 
 
 class ReportRenderer(object):
@@ -145,7 +148,7 @@ class ReportRenderer(object):
             return
         self.__y = self.__pageHeight - self.__footerHeight
         rect = QRectF(0, self.__y, self.__pageWidth, self.__footerHeight)
-        rpt.footer.render(self.__painter, rect)
+        rpt.footer.render(self.__painter, rect, self.__prev_item)
 
     def _printBegin(self):
         rpt = self._report
@@ -163,13 +166,14 @@ class ReportRenderer(object):
             return
         summaryHeight = rpt.summary.renderHeight()
         rect = QRectF(self.__x, self.__y, self.__columnWidth, summaryHeight)
-        rpt.summary.render(self.__painter, rect)
+        rpt.summary.render(self.__painter, rect, self.__prev_item)
 
     def render(self, printer, data):
 
         rpt = self._report
         try:
             data = iter(data)
+            self.__prev_item = None
             self.__data_item = data.next()
         except (TypeError, StopIteration):
             if rpt.printIfEmpty:
@@ -199,7 +203,9 @@ class ReportRenderer(object):
         self._printBegin()
 
         detailTop = self.__y
-        # I'm assuming footer height _cannot_ vary
+        # I'm assuming footer height _cannot_ vary according the detail item
+        # If I don't, I'll be never sure when I must print the footer
+        # just by looking at a single detail item
         if rpt.footer is not None:
             self.__footerHeight = rpt.footer.renderHeight()
         else:
@@ -232,6 +238,7 @@ class ReportRenderer(object):
                 rpt.detail.render(self.__painter, rect, self.__data_item)
                 self.__y += detailHeight
                 try:
+                    self.__prev_item = self.__data_item
                     self.__data_item = data.next()
                 except StopIteration:
                     break
@@ -331,12 +338,12 @@ class Label(TextElement):
 
 class Field(TextElement):
 
-    format = None
+    formatStr = None
 
     def render(self, painter, rect, data_item):
         if self.format:
             self._render(self, painter, rect,
-                self.format.format(getattr(data_item, self.fieldName,
+                self.formatStr.format(getattr(data_item, self.fieldName,
                     "<Error>")))
         else:
             self._render(painter, rect, getattr(data_item,
