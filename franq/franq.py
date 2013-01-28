@@ -77,6 +77,7 @@ class Report(BaseElement):
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
     printIfEmpty = False
     headerInFirstPage = True
+    footerInLastPage = True
 
     def __init__(self, properties=None, begin=None, header=None, detail=None,
             footer=None, summary=None):
@@ -133,40 +134,63 @@ class ReportRenderer(object):
         self.page += 1
         self.__y = 0.0
 
-    def _printHeader(self):
-        rpt = self._report
-        if rpt.header is None:
+    def _printPageHeader(self):
+        header = self._report.header
+        if header is None:
             return
-        height = rpt.header.renderHeight(self.__data_item)
+        height = header.renderHeight(self.__data_item)
         rect = QRectF(0, self.__y, self.__pageWidth, height)
-        rpt.header.render(self.__painter, rect, self.__data_item)
+        header.render(self.__painter, rect, self.__data_item)
         self.__y += height
 
-    def _printFooter(self):
-        rpt = self._report
-        if rpt.footer is None:
+    def _printPageFooter(self):
+        footer = self._report.footer
+        if footer is None:
             return
         self.__y = self.__pageHeight - self.__footerHeight
         rect = QRectF(0, self.__y, self.__pageWidth, self.__footerHeight)
-        rpt.footer.render(self.__painter, rect, self.__prev_item)
+        footer.render(self.__painter, rect, self.__prev_item)
 
     def _printBegin(self):
-        rpt = self._report
-        if rpt.begin is None:
+        begin = self._report.begin
+        if begin is None:
             return
-        height = rpt.begin.renderHeight(self.__data_item)
+        height = begin.renderHeight(self.__data_item)
+        # Should use columnWidth?
         rect = QRectF(0, self.__y, self.__pageWidth, height)
-        rpt.begin.render(self.__painter, rect, self.__data_item)
-        if rpt.begin.forceNewPageAfter:
+        begin.render(self.__painter, rect, self.__data_item)
+        if begin.forceNewPageAfter:
             self.newPage()
+        else:
+            self.__y += height
 
     def _printSummary(self):
-        rpt = self._report
-        if rpt.summary is None:
+        summary = self._report.summary
+        if summary is None:
             return
-        summaryHeight = rpt.summary.renderHeight()
-        rect = QRectF(self.__x, self.__y, self.__columnWidth, summaryHeight)
-        rpt.summary.render(self.__painter, rect, self.__prev_item)
+        if summary.forceNewPage:
+            self.newPage()
+        height = summary.renderHeight()
+        rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
+        summary.render(self.__painter, rect, self.__prev_item)
+
+    def _printColumnHeader(self):
+        header = self._report.detail.columnHeader
+        if header is None:
+            return
+        height = header.renderHeight(self.__data_item)
+        rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
+        header.render(self.__painter, rect, self.__data_item)
+        self.__y += height
+
+    def _printColumnFooter(self):
+        footer = self._report.detail.columnFooter
+        if footer is None:
+            return
+        self.__y = self.__pageHeight - (self.__footerHeight +
+            self.__columnFooterHeight)
+        rect = QRectF(self.__x, self.__y, self.__columnWidth, self.__footerHeight)
+        footer.render(self.__painter, rect, self.__prev_item)
 
     def render(self, printer, data):
 
@@ -199,10 +223,9 @@ class ReportRenderer(object):
         self.__pageWidth = printer.pageRect().width()
 
         if rpt.headerInFirstPage:
-            self._printHeader()
+            self._printPageHeader()
         self._printBegin()
 
-        detailTop = self.__y
         # I'm assuming footer height _cannot_ vary according the detail item
         # If I don't, I'll be never sure when I must print the footer
         # just by looking at a single detail item
@@ -211,25 +234,34 @@ class ReportRenderer(object):
         else:
             self.__footerHeight = 0
 
-        detailBottom = self.__pageHeight - self.__footerHeight
-
         if rpt.detail is not None and self.__data_item is not None:
             self.__col = 0
             self.__x = 0
             self.__columnWidth = (self.__pageWidth - rpt.detail.columnSpace *
                 (rpt.detail.columns - 1)) / rpt.detail.columns
+
+            self._printColumnHeader()
+            detailTop = self.__y
+            if rpt.detail.columnFooter is not None:
+                self.__columnFooterHeight = rpt.detail.columnFooter.renderHeight()
+            else:
+                self.__columnFooterHeight = 0
+
+            detailBottom = self.__pageHeight - (self.__footerHeight +
+                self.__columnFooterHeight)
             while True:
                 detailHeight = rpt.detail.renderHeight(self.__data_item)
 
                 if self.__y + detailHeight > detailBottom:
+                    self._printColumnFooter()
                     self.__col += 1
                     if self.__col < rpt.detail.columns:
                         self.__y = detailTop
                         self.__x += self.__columnWidth + rpt.detail.columnSpace
                     else:
-                        self._printFooter()
+                        self._printPageFooter()
                         self.newPage()
-                        self._printHeader()
+                        self._printPageHeader()
                         self.__col = 0
                         self.__x = 0
 
@@ -244,7 +276,9 @@ class ReportRenderer(object):
                     break
 
         self._printSummary()
-        self._printFooter()
+        self._printColumnFooter()
+        if rpt.footerInLastPage:
+            self._printPageFooter()
 
         self.__painter.end()
 
@@ -263,8 +297,8 @@ class Band(BaseElement):
             elementBottom = element.top + element.renderHeight(data_item)
             if elementBottom > height:
                 height = elementBottom
-            if self.child:
-                height += self.child.renderHeight(data_item)
+        if self.child:
+            height += self.child.renderHeight(data_item)
         return height
 
     def render(self, painter, rect, data_item=None):
