@@ -69,6 +69,7 @@ class Report(BaseElement):
 
     begin = None
     header = None
+    sections = None
     detail = None
     footer = None
     summary = None
@@ -79,8 +80,8 @@ class Report(BaseElement):
     headerInFirstPage = True
     footerInLastPage = True
 
-    def __init__(self, properties=None, begin=None, header=None, detail=None,
-            footer=None, summary=None):
+    def __init__(self, properties=None, begin=None, header=None,
+            detail=None, sections=None, footer=None, summary=None):
 
         if properties:
             self.properties = properties
@@ -89,6 +90,8 @@ class Report(BaseElement):
             self.begin = begin
         if header:
             self.header = header
+        if sections:
+            self.sections = sections
         if detail:
             self.detail = detail
         if footer:
@@ -100,18 +103,33 @@ class Report(BaseElement):
             self.begin = self.begin()
         if self.header is not None and not isinstance(self.header, Band):
             self.header = self.header()
-        if self.detail is not None and not isinstance(self.detail, Band):
-            self.detail = self.detail()
+        if self.sections is None:
+            self.sections = [Section(detailBands=[self.detail])]
+        for section in self.sections:
+            for i, detail in enumerate(section.detailBands):
+                if detail is not None and not isinstance(detail, Band):
+                    section[i] = detail()
         if self.footer is not None and not isinstance(self.footer, Band):
             self.footer = self.footer()
         if self.summary is not None and not isinstance(self.summary, Band):
             self.summary = self.summary()
 
-    def render(self, printer, data=None):
+    def render(self, printer, *dataSources):
 
         self.renderer = ReportRenderer(self)
-        self.renderer.render(printer, data)
+        self.renderer.render(printer, dataSources)
         self.renderer = None
+
+
+class Section(object):
+
+    columns = 1
+    columnSpace = 0.0
+    detailBands = []
+
+    def __init__(self, **kw):
+        for key, value in kw.items():
+            self.__dict__[key] = value
 
 
 class ReportRenderer(object):
@@ -189,21 +207,36 @@ class ReportRenderer(object):
             return
         self.__y = self.__pageHeight - (self.__footerHeight +
             self.__columnFooterHeight)
-        rect = QRectF(self.__x, self.__y, self.__columnWidth, self.__footerHeight)
+        rect = QRectF(self.__x, self.__y, self.__columnWidth,
+            self.__footerHeight)
         footer.render(self.__painter, rect, self.__prev_item)
 
-    def render(self, printer, data):
+    def render(self, printer, dataSources):
 
         rpt = self._report
+        sections = rpt.sections.iter()
+        section = sections.next()
+
+        # Pensar esto!!!
+        # Cada detalle debe consumir una datasource
+        # Si se consume una datasource se debe pasar a la siguiente y al
+        # siguiente detalle
+        # si la seccion no tiene más detalles debe pasar a la siguiente
+        # sección
+        dataSources = dataSources.iter()
         try:
-            data = iter(data)
-            self.__prev_item = None
-            self.__data_item = data.next()
+            dataSource = dataSources.next()
+            try:
+                dataSource = iter(dataSource)
+                self.__prev_item = None
+                self.__data_item = dataSource.next()
+            except (TypeError, StopIteration):
+                if rpt.printIfEmpty:
+                    self.__data_item = None
+                else:
+                    return
         except (TypeError, StopIteration):
-            if rpt.printIfEmpty:
-                self.__data_item = None
-            else:
-                return
+            pass  # Q hago aqui?
 
         self.__printer = printer
         self._printerSetup()
@@ -271,7 +304,7 @@ class ReportRenderer(object):
                 self.__y += detailHeight
                 try:
                     self.__prev_item = self.__data_item
-                    self.__data_item = data.next()
+                    self.__data_item = dataSource.next()
                 except StopIteration:
                     break
 
@@ -319,8 +352,6 @@ class Band(BaseElement):
 
 class DetailBand(Band):
 
-    columns = 1
-    columnSpace = 0.0
     groups = []
     forceNewColumn = False
     columnHeader = None
