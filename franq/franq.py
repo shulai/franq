@@ -76,7 +76,6 @@ class Report(BaseElement):
 
     paperSize = QPrinter.A4
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
-    printIfEmpty = False
     headerInFirstPage = True
     footerInLastPage = True
 
@@ -92,7 +91,7 @@ class Report(BaseElement):
             self.header = header
         if sections:
             self.sections = sections
-        if detail:
+        elif detail:
             self.detail = detail
         if footer:
             self.footer = footer
@@ -132,11 +131,24 @@ class Section(object):
             self.__dict__[key] = value
 
 
+class DataConsumedError(Exception):
+    """Raised when there are detailBands yet to be processed but no
+    move datasources available to match them"""
+    pass
+
+
 class ReportRenderer(object):
 
     def __init__(self, report):
         self._report = report
         self.page = 1
+        self._sections = None
+        self._detailBands = None
+        self.section = None
+        self.detailBand = None
+        self.dataSource = None
+        self.__prev_item = None
+        self.__data_item = None
 
     def _printerSetup(self):
         rpt = self._report
@@ -193,7 +205,7 @@ class ReportRenderer(object):
         summary.render(self.__painter, rect, self.__prev_item)
 
     def _printColumnHeader(self):
-        header = self._report.detail.columnHeader
+        header = self.detailBand.columnHeader
         if header is None:
             return
         height = header.renderHeight(self.__data_item)
@@ -202,7 +214,7 @@ class ReportRenderer(object):
         self.__y += height
 
     def _printColumnFooter(self):
-        footer = self._report.detail.columnFooter
+        footer = self.detailBand.columnFooter
         if footer is None:
             return
         self.__y = self.__pageHeight - (self.__footerHeight +
@@ -212,49 +224,46 @@ class ReportRenderer(object):
         footer.render(self.__painter, rect, self.__prev_item)
 
     def render(self, printer, dataSources):
-
         rpt = self._report
-        sections = rpt.sections.iter()
-        section = sections.next()
 
-        # Pensar esto!!!
-        # Cada detalle debe consumir una datasource
-        # Si se consume una datasource se debe pasar a la siguiente y al
-        # siguiente detalle
-        # si la seccion no tiene más detalles debe pasar a la siguiente
-        # sección
-        dataSources = dataSources.iter()
+        # 1
+        self._sections = iter(rpt.sections)
         try:
-            dataSource = dataSources.next()
-            try:
-                dataSource = iter(dataSource)
-                self.__prev_item = None
-                self.__data_item = dataSource.next()
-            except (TypeError, StopIteration):
-                if rpt.printIfEmpty:
-                    self.__data_item = None
-                else:
-                    return
-        except (TypeError, StopIteration):
-            pass  # Q hago aqui?
+            self.section = self._sections.next()
+            self._detailBands = iter(self.section.detailBands)
+            self.detailBand = self._detailBands.next()
+        except StopIteration:
+            self.detailBand = None
 
+        # 2
+        self._dataSources = iter(dataSources)
+        try:
+            self.dataSource = iter(self._dataSources.next())
+            self.__data_item = self.dataSource.next()
+        except StopIteration:
+            if self.detailBand:  # If detail-less report, continue
+                return
+
+        # 3
         self.__printer = printer
         self._printerSetup()
         self.__painter = QPainter()
         self.__painter.begin(printer)
 
+        # 4
         rpt.renderSetup(self.__painter)
         rect = printer.pageRect()
         rect.moveTo(0.0, 0.0)
 
+        # 5
         rpt.renderBorderAndBackground(self.__painter, rect)
         self.page = 1
-        self.lastPage = False
 
         self.__y = 0.0
         self.__pageHeight = printer.pageRect().height()
         self.__pageWidth = printer.pageRect().width()
 
+        # 6
         if rpt.headerInFirstPage:
             self._printPageHeader()
         self._printBegin()
@@ -267,49 +276,79 @@ class ReportRenderer(object):
         else:
             self.__footerHeight = 0
 
-        if rpt.detail is not None and self.__data_item is not None:
+        if self.detailBand and self.__data_item is not None:
+
+            # 7
             self.__col = 0
             self.__x = 0
-            self.__columnWidth = (self.__pageWidth - rpt.detail.columnSpace *
-                (rpt.detail.columns - 1)) / rpt.detail.columns
+            self.__columnWidth = (self.__pageWidth - self.section.columnSpace *
+                (self.section.columns - 1)) / self.section.columns
 
             self._printColumnHeader()
             detailTop = self.__y
-            if rpt.detail.columnFooter is not None:
-                self.__columnFooterHeight = rpt.detail.columnFooter.renderHeight()
+            if self.detailBand.columnFooter is not None:
+                self.__columnFooterHeight = (self.detailBand.columnFooter.
+                    renderHeight())
             else:
                 self.__columnFooterHeight = 0
 
             detailBottom = self.__pageHeight - (self.__footerHeight +
                 self.__columnFooterHeight)
             while True:
-                detailHeight = rpt.detail.renderHeight(self.__data_item)
+                detailHeight = self.detailBand.renderHeight(self.__data_item)
 
                 if self.__y + detailHeight > detailBottom:
                     self._printColumnFooter()
                     self.__col += 1
-                    if self.__col < rpt.detail.columns:
+                    if self.__col < self.section.columns:
                         self.__y = detailTop
-                        self.__x += self.__columnWidth + rpt.detail.columnSpace
+                        self.__x += self.__columnWidth + self.section.columnSpace
                     else:
                         self._printPageFooter()
                         self.newPage()
                         self._printPageHeader()
                         self.__col = 0
                         self.__x = 0
+                        self._printColumnHeader()
 
                 rect = QRectF(self.__x, self.__y,
                     self.__columnWidth, detailHeight)
-                rpt.detail.render(self.__painter, rect, self.__data_item)
+                self.detailBand.render(self.__painter, rect, self.__data_item)
                 self.__y += detailHeight
                 try:
                     self.__prev_item = self.__data_item
-                    self.__data_item = dataSource.next()
+                    self.__data_item = self.dataSource.next()
                 except StopIteration:
-                    break
+                    # TODO: Print detailBand.detailSummary
+                    try:
+                        self.detailBand = self._detailBands.next()
+                        # TODO: Start new column/page if forceNewColumn is set
+                        # TODO: Print detailBand.detailBegin
+                    except StopIteration:
+                        self._printColumnFooter()
+                        self._printPageFooter()
+                        try:
+                            self.section = self._sections.next()
+                            self._detailBands = iter(self.section.detailBands)
+                            self.detailBand = self._detailBands.next()
+                            self.newPage()
+                            self._printPageHeader()
+                            self.__col = 0
+                            self.__x = 0
+                            self.__columnWidth = (self.__pageWidth - self.section.columnSpace *
+                                (self.section.columns - 1)) / self.section.columns
+                            self._printColumnHeader()
+                        except StopIteration:
+                            break
 
+                    try:
+                        self.dataSource = iter(self._dataSources.next())
+                        self.__data_item = self.dataSource.next()
+                    except StopIteration:
+                        raise DataConsumedError()
+
+            self._printColumnFooter()
         self._printSummary()
-        self._printColumnFooter()
         if rpt.footerInLastPage:
             self._printPageFooter()
 
@@ -356,6 +395,8 @@ class DetailBand(Band):
     forceNewColumn = False
     columnHeader = None
     columnFooter = None
+    detailBegin = None
+    detailSummary = None
 
 
 class DetailGroup(object):

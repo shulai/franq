@@ -5,7 +5,7 @@ setup(
     name='franq',
     version='0.1',
     description="PyQt-based report engine",
-    author="Julio Gazquez",
+    author="Julio Cesar Gazquez",
     author_email='julio@mebamutual.com.ar',
     url='http://jotacege.com.ar/franq',
     packages=['franq', 'franq.designer'],

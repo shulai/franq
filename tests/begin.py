@@ -25,4 +25,4 @@ r = BeginBandReport()
 
 printer = QtGui.QPrinter()
 printer.setOutputFileName('begin.pdf')
-r.render(printer, None)
+r.render(printer)
