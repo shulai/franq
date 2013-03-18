@@ -409,13 +409,13 @@ class DetailGroup(object):
     footer = None
 
     def __init__(self, expression=None, header=None, footer=None):
-       if expression:
-           self.expression = expression
-       if header:
-           self.header = header
-       if footer:
-           self.footer = footer
-       self._value = None
+        if expression:
+            self.expression = expression
+        if header:
+            self.header = header
+        if footer:
+            self.footer = footer
+        self._value = None
 
 
 class Element(BaseElement):
@@ -459,7 +459,7 @@ class Field(TextElement):
     formatStr = None
 
     def render(self, painter, rect, data_item):
-        if self.format:
+        if self.formatStr:
             self._render(self, painter, rect,
                 self.formatStr.format(getattr(data_item, self.fieldName,
                     "<Error>")))
