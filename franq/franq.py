@@ -312,7 +312,7 @@ class ReportRenderer(object):
                         self._printPageHeader()
                         self.__col = 0
                         self.__x = 0
-                        self._printColumnHeader()
+                    self._printColumnHeader()
 
                 rect = QRectF(self.__x, self.__y,
                     self.__columnWidth, detailHeight)
