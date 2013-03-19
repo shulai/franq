@@ -287,8 +287,9 @@ class ReportRenderer(object):
             self.__columnWidth = (self.__pageWidth - self.section.columnSpace *
                 (self.section.columns - 1)) / self.section.columns
 
-            self._printColumnHeader()
             detailTop = self.__y
+            self._printColumnHeader()
+
             if self.detailBand.columnFooter is not None:
                 self.__columnFooterHeight = (self.detailBand.columnFooter.
                     renderHeight())
