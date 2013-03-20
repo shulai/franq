@@ -298,7 +298,46 @@ class ReportRenderer(object):
 
             detailBottom = self.__pageHeight - (self.__footerHeight +
                 self.__columnFooterHeight)
+
+            groupingLevel = 0
+
+            for group in self.detailBand.groups:
+                groupingLevel += 1
+                group.value = group.expression(self.__data_item)
+                if group.header:
+                    groupHeaderHeight = group.header.renderHeight()
+                    rect = QRectF(self.__x, self.__y,
+                        self.__columnWidth, groupHeaderHeight)
+                    group.header.render(self.__painter, rect, self.__data_item)
+                    self.__y += groupHeaderHeight
+
             while True:
+
+                for group in self.detailBand.groups[::-1]:
+                    new_group_value = group.expression(self.__data_item)
+                    if new_group_value == group.value:
+                        break
+                    groupingLevel -= 1
+                    group.value = new_group_value
+                    if group.footer:
+                        groupFooterHeight = group.footer.renderHeight()
+                        rect = QRectF(self.__x, self.__y,
+                            self.__columnWidth, groupFooterHeight)
+                        group.footer.render(self.__painter, rect,
+                            self.__data_item)
+                        self.__y += groupFooterHeight
+
+                for group in self.detailBand.groups[groupingLevel:]:
+                    groupingLevel += 1
+                    if group.header:
+                        groupHeaderHeight = group.header.renderHeight(
+                            self.__data_item)
+                        rect = QRectF(self.__x, self.__y,
+                            self.__columnWidth, groupHeaderHeight)
+                        group.header.render(self.__painter, rect,
+                            self.__data_item)
+                        self.__y += groupHeaderHeight
+
                 detailHeight = self.detailBand.renderHeight(self.__data_item)
 
                 if self.__y + detailHeight > detailBottom:
@@ -323,6 +362,16 @@ class ReportRenderer(object):
                     self.__prev_item = self.__data_item
                     self.__data_item = self.dataSource.next()
                 except StopIteration:
+                    for group in self.detailBand.groups[::-1]:
+                        groupingLevel -= 1
+                        if group.footer:
+                            groupFooterHeight = group.footer.renderHeight()
+                            rect = QRectF(self.__x, self.__y,
+                                self.__columnWidth, groupFooterHeight)
+                            group.footer.render(self.__painter, rect,
+                                self.__data_item)
+                            self.__y += groupFooterHeight
+
                     # TODO: Print detailBand.detailSummary
                     try:
                         self.detailBand = self._detailBands.next()
@@ -416,7 +465,7 @@ class DetailGroup(object):
             self.header = header
         if footer:
             self.footer = footer
-        self._value = None
+        self.value = None
 
 
 class Element(BaseElement):
@@ -477,6 +526,15 @@ class Function(TextElement):
 
 
 class Line(Element):
+
+    def render(self, painter, rect, data_item):
+        self.renderSetup(painter)
+        painter.drawLine(self.left, self.top, self.left + self.width,
+            self.top + self.height)
+        self.renderTearDown(painter)
+
+
+class Box(Element):
 
     def render(painter, rect, data_item):
         pass  # Stub
