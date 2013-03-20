@@ -16,6 +16,7 @@ class BaseElement(object):
     background = None
     font = None
     pen = None
+    on_before_print = None
 
     def __init__(self, **kw):
         for key, value in kw.items():
@@ -427,6 +428,10 @@ class Band(BaseElement):
         return height
 
     def render(self, painter, rect, data_item=None):
+
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
         band_rect = QRectF(rect.left(), rect.top(), rect.width(), self.height)
         self.renderSetup(painter)
         self.renderBorderAndBackground(painter, band_rect)
@@ -501,6 +506,9 @@ class TextElement(Element):
 class Label(TextElement):
 
     def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
         self._render(painter, rect, self.text)
 
 
@@ -509,6 +517,9 @@ class Field(TextElement):
     formatStr = None
 
     def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
         if self.formatStr:
             self._render(self, painter, rect,
                 self.formatStr.format(getattr(data_item, self.fieldName,
@@ -521,6 +532,9 @@ class Field(TextElement):
 class Function(TextElement):
 
     def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
         value = self.func(data_item)
         self._render(painter, rect, value)
 
@@ -528,6 +542,9 @@ class Function(TextElement):
 class Line(Element):
 
     def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
         self.renderSetup(painter)
         painter.drawLine(self.left, self.top, self.left + self.width,
             self.top + self.height)
@@ -546,6 +563,9 @@ class Image(Element):
     pixmap = None
 
     def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
         if not self.pixmap:
             if self.fileName:
                 self.pixmap = QPixmap(self.pixmap)
