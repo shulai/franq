@@ -287,8 +287,9 @@ class ReportRenderer(object):
             self.__columnWidth = (self.__pageWidth - self.section.columnSpace *
                 (self.section.columns - 1)) / self.section.columns
 
-            self._printColumnHeader()
             detailTop = self.__y
+            self._printColumnHeader()
+
             if self.detailBand.columnFooter is not None:
                 self.__columnFooterHeight = (self.detailBand.columnFooter.
                     renderHeight())
@@ -312,7 +313,7 @@ class ReportRenderer(object):
                         self._printPageHeader()
                         self.__col = 0
                         self.__x = 0
-                        self._printColumnHeader()
+                    self._printColumnHeader()
 
                 rect = QRectF(self.__x, self.__y,
                     self.__columnWidth, detailHeight)
@@ -409,13 +410,13 @@ class DetailGroup(object):
     footer = None
 
     def __init__(self, expression=None, header=None, footer=None):
-       if expression:
-           self.expression = expression
-       if header:
-           self.header = header
-       if footer:
-           self.footer = footer
-       self._value = None
+        if expression:
+            self.expression = expression
+        if header:
+            self.header = header
+        if footer:
+            self.footer = footer
+        self._value = None
 
 
 class Element(BaseElement):
@@ -459,7 +460,7 @@ class Field(TextElement):
     formatStr = None
 
     def render(self, painter, rect, data_item):
-        if self.format:
+        if self.formatStr:
             self._render(self, painter, rect,
                 self.formatStr.format(getattr(data_item, self.fieldName,
                     "<Error>")))
