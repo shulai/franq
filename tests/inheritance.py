@@ -11,17 +11,20 @@ from franq import Report, Band, DetailBand, Label, Function, mm
 class BaseReport(Report):
     printIfEmpty = True
     margin = (10 * mm, 10 * mm, 10 * mm, 25 * mm)
+
     class header(Band):
         elements = [
-            Label(top=0 * mm, left=20 * mm, height=10 * mm, width=145 * mm, 
-                border=(None, None, QtGui.QPen(QtGui.QBrush("black"), 3), None),
+            Label(top=0 * mm, left=20 * mm, height=10 * mm, width=145 * mm,
+                border=(None, None, QtGui.QPen(QtGui.QBrush("black"), 3),
+                    None),
                 font=QtGui.QFont("Serif", 14),
                 text=u"Header - Title",
                 textOptions=QtGui.QTextOption(Qt.AlignCenter))
             ]
+
     class footer(Band):
         elements = [
-            Label(top=0 * mm, left=0 * mm, height=10 * mm, width=185 * mm, 
+            Label(top=0 * mm, left=0 * mm, height=10 * mm, width=185 * mm,
                 text=u"Footer - Title")
             ]
 
@@ -32,10 +35,12 @@ class InheritedReport(BaseReport):
         super(InheritedReport, self).__init__()
         self.header.elements.extend([])
     detail = DetailBand(
-        height = 5 * mm,
-        elements = [
-            Function(top=0 * mm, left=0 * mm, height=5 * mm, width=30 * mm, func=lambda x: x[0]),
-            Function(top=0 * mm, left=100 * mm, height=5 * mm, width=30 * mm, func=lambda x: x[1])
+        height=5 * mm,
+        elements=[
+            Function(top=0 * mm, left=0 * mm, height=5 * mm, width=30 * mm,
+                func=lambda x: x[0]),
+            Function(top=0 * mm, left=100 * mm, height=5 * mm, width=30 * mm,
+                func=lambda x: x[1])
             ])
 
 app = QtGui.QApplication([])
@@ -44,5 +49,5 @@ r = InheritedReport()
 
 printer = QtGui.QPrinter()
 printer.setOutputFileName('inheritance.pdf')
-data = [ (i, i*3) for i in range(0, 100)]
+data = [(i, i * 3) for i in range(0, 100)]
 r.render(printer, data)
