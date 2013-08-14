@@ -537,7 +537,7 @@ class Field(TextElement):
             self.on_before_print(self, data_item)
 
         if self.formatStr:
-            self._render(self, painter, rect,
+            self._render(painter, rect,
                 self.formatStr.format(getattr(data_item, self.fieldName,
                     "<Error>")))
         else:
