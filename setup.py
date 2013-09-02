@@ -27,6 +27,7 @@ setup(
     url='http://jotacege.com.ar/franq',
     packages=['franq', 'franq.designer'],
     package_dir={'franq.designer': 'designer'},
+    use_2to3 = True,
     long_description="""
     Franq is a PyQt4 based reporting framework, similar to Geraldo Reports
     """,
@@ -53,5 +54,5 @@ setup(
     keywords='reporting pyqt4',
     license='GPL',
     install_requires=[
-        'PyQt'
+        #'PyQt'
         ])
