@@ -15,4 +15,4 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Franq; If not, see <http://www.gnu.org/licenses/>.
-from franq import *
+from . franq import *
