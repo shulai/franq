@@ -541,8 +541,10 @@ class Field(TextElement):
                 self.formatStr.format(getattr(data_item, self.fieldName,
                     "<Error>")))
         else:
-            self._render(painter, rect, getattr(data_item,
-                self.fieldName, "<Error>"))
+            v = getattr(data_item, self.fieldName, "<Error>")
+            if v is None:
+                v = ''
+            self._render(painter, rect, v)
 
 
 class Function(TextElement):
