@@ -1,0 +1,6 @@
+Franq is a PyQt4 based reporting framework.
+It supports page header and footers, multiple detail bands/datasets, sections, grouping, etc.
+
+Also supports inheritance.
+
+Franq is compatible with Python 2.7 and 3.x, and is GPL3 licensed.
