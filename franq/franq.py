@@ -388,24 +388,9 @@ class ReportRenderer(object):
             # Detail main loop
             while True:
 
-                # Print group footers before detail row if required
-                # then group headers
-                for group in self.detailBand.groups[::-1]:
-                    new_group_value = group.expression(self.__data_item)
-                    if new_group_value == group.value:
-                        break
-                    groupingLevel -= 1
-                    group.value = new_group_value
-                    if group.footer:
-                        groupFooterHeight = group.footer.renderHeight()
-                        rect = QRectF(self.__x, self.__y,
-                            self.__columnWidth, groupFooterHeight)
-                        group.footer.render(self.__painter, rect,
-                            self.__data_item)
-                        self.__y += groupFooterHeight
-
                 for group in self.detailBand.groups[groupingLevel:]:
                     groupingLevel += 1
+                    group.value = group.expression(self.__data_item)
                     if group.header:
                         groupHeaderHeight = group.header.renderHeight(
                             self.__data_item)
@@ -414,6 +399,7 @@ class ReportRenderer(object):
                         group.header.render(self.__painter, rect,
                             self.__data_item)
                         self.__y += groupHeaderHeight
+
 
                 detailHeight = self.detailBand.renderHeight(self.__data_item)
 
@@ -440,6 +426,22 @@ class ReportRenderer(object):
                 try:
                     self.__prev_item = self.__data_item
                     self.__data_item = self.dataSource.next()
+
+                    # Print group footers if required by new row
+                    for group in self.detailBand.groups[::-1]:
+                        new_group_value = group.expression(self.__data_item)
+                        if new_group_value == group.value:
+                            break
+                        groupingLevel -= 1
+                        group.value = new_group_value
+                        if group.footer:
+                            groupFooterHeight = group.footer.renderHeight()
+                            rect = QRectF(self.__x, self.__y,
+                                self.__columnWidth, groupFooterHeight)
+                            group.footer.render(self.__painter, rect,
+                                self.__data_item)
+                            self.__y += groupFooterHeight
+
                 except StopIteration:
                     # No more data for this DetailBand
                     # Close groups, proceed to the next DetailBand
