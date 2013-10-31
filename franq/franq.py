@@ -33,7 +33,6 @@ class BaseElement(object):
 
     Properties
     ----------
-
     * border: Either a single or a list/tuple of 4
         QPen/QColor/QPenStyle for drawing element border, default None.
     * background: QBrush or QColor for background painting, default None.
@@ -54,6 +53,9 @@ class BaseElement(object):
     on_before_print = None
 
     def __init__(self, **kw):
+        """
+            Any keyword properties will be set as object properties.
+        """
         for key, value in kw.items():
             self.__dict__[key] = value
 
@@ -111,7 +113,6 @@ class Report(BaseElement):
 
         Properties
         ----------
-
         * paperSize: QPrinter.PageSize
         * margins: list/tuple of 4 floats, use mm/cm/inch constants
             as multipliers
@@ -193,7 +194,6 @@ class Section(object):
 
         Properties
         ----------
-
         * columns: int, default 1
         * columnSpace: float, use mm/cm/inch constants
             as multipliers
@@ -453,15 +453,16 @@ class ReportRenderer(object):
                                 self.__data_item)
                             self.__y += groupFooterHeight
 
+                    self._printColumnFooter()
                     # TODO: Print detailBand.detailSummary
                     try:
                         self.detailBand = self._detailBands.next()
+                        self._printColumnHeader()
                         # TODO: Start new column/page if forceNewColumn is set
                         # TODO: Print detailBand.detailBegin
                     except StopIteration:
                         # No more detail bands in this section, proceed to
                         # the next section
-                        self._printColumnFooter()
                         self._printPageFooter()
                         try:
                             self.section = self._sections.next()
@@ -476,7 +477,6 @@ class ReportRenderer(object):
                             self._printColumnHeader()
                         except StopIteration:
                             break
-
                     try:
                         self.dataSource = iter(self._dataSources.next())
                         self.__data_item = self.dataSource.next()
@@ -538,8 +538,8 @@ class Band(BaseElement):
             element.render(painter, band_rect, data_item)
 
         if self.child:
-            child_rect = QRectF(rect.left(), self.height, rect.width(),
-                rect.height() - self.height)
+            child_rect = QRectF(rect.left(), rect.top() + self.height,
+                rect.width(), rect.height() - self.height)
             self.child.render(painter, child_rect, data_item)
 
         self.renderTearDown(painter)
@@ -553,7 +553,6 @@ class DetailBand(Band):
 
         Properties
         ----------
-
         * groups: List of DetailGroup, default empty list.
         * columnHeader: Header Band for the column, useful for detail titles,
             default None.
@@ -601,9 +600,22 @@ class Element(BaseElement):
 
         Inherits BaseElement.
 
-        * left, top, width, height: float, use mm/cm/inch constants
-            as multipliers.
+        Properties
+        ----------
+        * left: float, position into the band use mm/cm/inch constants
+            as multipliers, default 0.
+        * top: float, position into the band use mm/cm/inch constants
+            as multipliers, default 0.
+        * width: float, element width, use mm/cm/inch constants as multipliers,
+            default 0.
+        * height: float, element width, use mm/cm/inch constants as multipliers,
+            default 0.
     """
+    left = 0.0
+    top = 0.0
+    width = 100 * mm
+    height = 5 * mm
+
     def renderHeight(self, data_item):
         return self.height
 
@@ -619,7 +631,6 @@ class TextElement(Element):
 
         Properties
         ----------
-
         * textOptions: QTextOption, mainly used for text alignment.
     """
     textOptions = QTextOption()
@@ -667,7 +678,6 @@ class Field(TextElement):
 
         Properties
         ----------
-
         * fieldName: str, attribute name.
         * formatStr: unicode, optional Python standard formatting string,
             default None.
@@ -697,7 +707,6 @@ class Function(TextElement):
 
         Properties
         ----------
-
         * func: callable, usually a lambda or a report method, receives the
             data item as parameter, returns unicode value to render.
     """

@@ -1,6 +1,49 @@
 Franq is a PyQt4 based reporting framework.
+
 It supports page header and footers, multiple detail bands/datasets, sections, grouping, etc.
 
 Also supports inheritance.
 
-Franq is compatible with Python 2.7 and 3.x, and is GPL3 licensed.
+Franq is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+any later version.
+
+At this time this is *alpha* code.
+
+Requirements
+============
+
+Franq is compatible with Python 2.7 and 3.x.
+
+Installation
+============
+You can install it easily using setuptools/distribute:
+
+# python setup.py install
+
+Python 3 installation requires 2to3 and distribute or setuptools version supporting 2to3
+
+Where to start
+==============
+
+Conceptually Franq is similar to popular reporting tools like Crystal Reports, but
+with no visual designer available.
+
+Currently, you can:
+    
+* See class reference using PyDoc on franq/franq.py.
+* See examples in the examples directory:
+    + empty.py: Skeleton empty report.
+    + begin.py: A simple, "Hello world" example.
+    + detail.py: A simple report with a detail band an a simple string dataset.
+    + header_footer.py: A report with page header and footer bands.
+    + groups.py: A report with nested groups.
+    + child.py: A simple report featuring a child band.
+    + columns.py: A report featuring explicit sections and columns
+    + inheritance.py: An example featuring an approach for inheritance.
+
+Questions? Suggestions? Ideas? Patches?
+=======================================
+
+Send them to julio _at_ mebamutual _dot_ com _dot_ ar
