@@ -28,6 +28,24 @@ cm = 300 / 2.54
 
 
 class BaseElement(object):
+    """
+    The base class of all report elements.
+
+    Properties
+    ----------
+    * border: Either a single or a list/tuple of 4
+        QPen/QColor/QPenStyle for drawing element border, default None.
+    * background: QBrush or QColor for background painting, default None.
+    * font: QFont, default None
+    * pen: QPen/QColor/QPenStyle, default None, for using in drawings
+
+    Properties like font/pen will use the value of the parent property when
+    set to None.
+
+    Events
+    ------
+    * on_before_print: callable (event handler), default None
+    """
     border = None
     background = None
     font = None
@@ -35,6 +53,9 @@ class BaseElement(object):
     on_before_print = None
 
     def __init__(self, **kw):
+        """
+            Any keyword properties will be set as object properties.
+        """
         for key, value in kw.items():
             self.__dict__[key] = value
 
@@ -85,6 +106,28 @@ class BaseElement(object):
 
 class Report(BaseElement):
 
+    """
+        Base report class.
+
+        Inherits BaseElement
+
+        Properties
+        ----------
+        * paperSize: QPrinter.PageSize
+        * margins: list/tuple of 4 floats, use mm/cm/inch constants
+            as multipliers
+        * headerInFirstPage: Boolean, default True
+        * footerInLastPage: Boolean, default True
+
+        * title: Report title, default None
+        * begin: Starting Band, default None
+        * header: Band for page headers, default None
+        * sections: list of Section objects, default None
+        * detail: Shorthand for defining a simple Section with a single
+            DetailBand, default None.
+        * footer: Band for page footers, default None
+        * summary: Final band, default None
+    """
     title = None
 
     begin = None
@@ -141,7 +184,21 @@ class Report(BaseElement):
 
 
 class Section(object):
+    """
+        A Section is a part of a report with one or more detail bands and
+        distinctive layout properties, therefore when rendering a new
+        section it will go into a new page.
 
+        Currently sections can have distinct column number and spacing,
+        in a future should have distinct page sizes and orientation as well.
+
+        Properties
+        ----------
+        * columns: int, default 1
+        * columnSpace: float, use mm/cm/inch constants
+            as multipliers
+        * detailBands: a list of DetailBand
+    """
     columns = 1
     columnSpace = 0.0
     detailBands = []
@@ -317,7 +374,7 @@ class ReportRenderer(object):
                 self.__columnFooterHeight)
 
             groupingLevel = 0
-
+            # Print first round of group headers
             for group in self.detailBand.groups:
                 groupingLevel += 1
                 group.value = group.expression(self.__data_item)
@@ -328,24 +385,12 @@ class ReportRenderer(object):
                     group.header.render(self.__painter, rect, self.__data_item)
                     self.__y += groupHeaderHeight
 
+            # Detail main loop
             while True:
-
-                for group in self.detailBand.groups[::-1]:
-                    new_group_value = group.expression(self.__data_item)
-                    if new_group_value == group.value:
-                        break
-                    groupingLevel -= 1
-                    group.value = new_group_value
-                    if group.footer:
-                        groupFooterHeight = group.footer.renderHeight()
-                        rect = QRectF(self.__x, self.__y,
-                            self.__columnWidth, groupFooterHeight)
-                        group.footer.render(self.__painter, rect,
-                            self.__data_item)
-                        self.__y += groupFooterHeight
 
                 for group in self.detailBand.groups[groupingLevel:]:
                     groupingLevel += 1
+                    group.value = group.expression(self.__data_item)
                     if group.header:
                         groupHeaderHeight = group.header.renderHeight(
                             self.__data_item)
@@ -355,8 +400,11 @@ class ReportRenderer(object):
                             self.__data_item)
                         self.__y += groupHeaderHeight
 
+
                 detailHeight = self.detailBand.renderHeight(self.__data_item)
 
+                # If there is no space left, start new column/page
+                # Print footers and headers
                 if self.__y + detailHeight > detailBottom:
                     self._printColumnFooter()
                     self.__col += 1
@@ -378,7 +426,25 @@ class ReportRenderer(object):
                 try:
                     self.__prev_item = self.__data_item
                     self.__data_item = self.dataSource.next()
+
+                    # Print group footers if required by new row
+                    for group in self.detailBand.groups[::-1]:
+                        new_group_value = group.expression(self.__data_item)
+                        if new_group_value == group.value:
+                            break
+                        groupingLevel -= 1
+                        group.value = new_group_value
+                        if group.footer:
+                            groupFooterHeight = group.footer.renderHeight()
+                            rect = QRectF(self.__x, self.__y,
+                                self.__columnWidth, groupFooterHeight)
+                            group.footer.render(self.__painter, rect,
+                                self.__data_item)
+                            self.__y += groupFooterHeight
+
                 except StopIteration:
+                    # No more data for this DetailBand
+                    # Close groups, proceed to the next DetailBand
                     for group in self.detailBand.groups[::-1]:
                         groupingLevel -= 1
                         if group.footer:
@@ -389,13 +455,16 @@ class ReportRenderer(object):
                                 self.__data_item)
                             self.__y += groupFooterHeight
 
+                    self._printColumnFooter()
                     # TODO: Print detailBand.detailSummary
                     try:
                         self.detailBand = self._detailBands.next()
+                        self._printColumnHeader()
                         # TODO: Start new column/page if forceNewColumn is set
                         # TODO: Print detailBand.detailBegin
                     except StopIteration:
-                        self._printColumnFooter()
+                        # No more detail bands in this section, proceed to
+                        # the next section
                         self._printPageFooter()
                         try:
                             self.section = self._sections.next()
@@ -410,7 +479,6 @@ class ReportRenderer(object):
                             self._printColumnHeader()
                         except StopIteration:
                             break
-
                     try:
                         self.dataSource = iter(self._dataSources.next())
                         self.__data_item = self.dataSource.next()
@@ -426,7 +494,23 @@ class ReportRenderer(object):
 
 
 class Band(BaseElement):
+    """
+        A Band of the report.
 
+        Inherits BaseElement.
+
+        Properties
+        ----------
+        height: float, use mm/cm/inch constants as multipliers.
+        elements: list of Element objects.
+        child: A Band to be printed after this band, being separate allows
+            for example page breaks.
+        forceNewPage: boolean. Start a new page before start printing the band,
+            default False.
+        forceNewPageAfter: boolean, Start a new page before start printing the
+            band, default False.
+
+    """
     height = 20 * mm
     elements = []
     child = None
@@ -456,15 +540,30 @@ class Band(BaseElement):
             element.render(painter, band_rect, data_item)
 
         if self.child:
-            child_rect = QRectF(rect.left(), self.height, rect.width(),
-                rect.height() - self.height)
+            child_rect = QRectF(rect.left(), rect.top() + self.height,
+                rect.width(), rect.height() - self.height)
             self.child.render(painter, child_rect, data_item)
 
         self.renderTearDown(painter)
 
 
 class DetailBand(Band):
+    """
+        A Band associated with a detail dataset.
 
+        Inherits Band.
+
+        Properties
+        ----------
+        * groups: List of DetailGroup, default empty list.
+        * columnHeader: Header Band for the column, useful for detail titles,
+            default None.
+        * columnFooter: Footer Band for the column, useful for detail summaries,
+            default None.
+        * detailBegin: Band preceding the detail, default None.
+        * detailSummary: Band after the detail, default None.
+
+    """
     groups = []
     forceNewColumn = False
     columnHeader = None
@@ -474,7 +573,15 @@ class DetailBand(Band):
 
 
 class DetailGroup(object):
+    """
+        Grouping of a detailband dataset items
 
+        Properties
+        ----------
+        * expression: callable, usually a lambda. Default None.
+        * header: Group header band, useful for titles, default None.
+        * footer: Group footer band, useful for summaries, default None.
+    """
     expression = None
     header = None
     footer = None
@@ -490,6 +597,26 @@ class DetailGroup(object):
 
 
 class Element(BaseElement):
+    """
+        Base of Band Elements, like labels, values or drawings
+
+        Inherits BaseElement.
+
+        Properties
+        ----------
+        * left: float, position into the band use mm/cm/inch constants
+            as multipliers, default 0.
+        * top: float, position into the band use mm/cm/inch constants
+            as multipliers, default 0.
+        * width: float, element width, use mm/cm/inch constants as multipliers,
+            default 0.
+        * height: float, element width, use mm/cm/inch constants as multipliers,
+            default 0.
+    """
+    left = 0.0
+    top = 0.0
+    width = 100 * mm
+    height = 5 * mm
 
     def renderHeight(self, data_item):
         return self.height
@@ -499,7 +626,15 @@ class Element(BaseElement):
 
 
 class TextElement(Element):
+    """
+        Base of text-rendering Elements.
 
+        Inherits Element.
+
+        Properties
+        ----------
+        * textOptions: QTextOption, mainly used for text alignment.
+    """
     textOptions = QTextOption()
 
     def renderHeight(self, data_item):
@@ -520,7 +655,15 @@ class TextElement(Element):
 
 
 class Label(TextElement):
+    """
+        Static (unless you cheat using events ;-) text element.
 
+        Inherits TextElement.
+
+        Properties
+        ----------
+        * text: unicode, text value of the Label.
+    """
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
@@ -529,7 +672,18 @@ class Label(TextElement):
 
 
 class Field(TextElement):
+    """
+        Dynamic, dataset item attribute based text element.
+        Useful when dataset items are entity objects.
 
+        Inherits TextElement.
+
+        Properties
+        ----------
+        * fieldName: str, attribute name.
+        * formatStr: unicode, optional Python standard formatting string,
+            default None.
+    """
     formatStr = None
 
     def render(self, painter, rect, data_item):
@@ -548,7 +702,16 @@ class Field(TextElement):
 
 
 class Function(TextElement):
+    """
+        Dynamic Function based text element.
 
+        Inherits TextElement.
+
+        Properties
+        ----------
+        * func: callable, usually a lambda or a report method, receives the
+            data item as parameter, returns unicode value to render.
+    """
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
@@ -558,7 +721,11 @@ class Function(TextElement):
 
 
 class Line(Element):
+    """
+        Line drawing element.
 
+        Inherits Element.
+    """
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
@@ -570,13 +737,27 @@ class Line(Element):
 
 
 class Box(Element):
+    """
+        Box drawing element. (Currently stub)
 
+        Inherits Element.
+    """
     def render(painter, rect, data_item):
         pass  # Stub
 
 
 class Image(Element):
+    """
+        Image rendering element.
 
+        Inherits Element.
+
+        Properties
+        ----------
+        * pixmap: QPixmap of the image, default None.
+        * fileName: name of the image file, used if pixmap is None,
+            default None.
+    """
     fileName = None
     pixmap = None
 
