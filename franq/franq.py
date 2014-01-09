@@ -731,19 +731,26 @@ class Line(Element):
             self.on_before_print(self, data_item)
 
         self.renderSetup(painter)
-        painter.drawLine(self.left, self.top, self.left + self.width,
-            self.top + self.height)
+        left = self.left + rect.left()
+        top = self.top + rect.top()
+        painter.drawLine(left, top, left + self.width, top + self.height)
         self.renderTearDown(painter)
 
 
 class Box(Element):
     """
-        Box drawing element. (Currently stub)
+        Box drawing element
 
         Inherits Element.
     """
-    def render(painter, rect, data_item):
-        pass  # Stub
+    def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
+        self.renderSetup(painter)
+        painter.drawRect(QRectF(self.left + rect.left(), self.top + rect.top(),
+                self.width, self.height))
+        self.renderTearDown(painter)
 
 
 class Image(Element):
@@ -762,12 +769,16 @@ class Image(Element):
     pixmap = None
 
     def render(self, painter, rect, data_item):
+
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
 
         if not self.pixmap:
             if self.fileName:
-                self.pixmap = QPixmap(self.pixmap)
+                self.pixmap = QPixmap(self.fileName)
 
-            painter.drawPixmap(QPointF(self.left, self.top), self.pixmap,
-                self.pixmap.rect())
+        painter.drawPixmap(
+            QRectF(self.left + rect.left(), self.top + rect.top(),
+                self.width, self.height),
+            self.pixmap,
+            QRectF(0, 0, self.pixmap.width(), self.pixmap.height()))
