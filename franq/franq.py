@@ -20,7 +20,7 @@ import sip
 sip.setapi("QString", 2)
 
 from PyQt4.QtCore import QPointF, QRectF, QSizeF
-from PyQt4.QtGui import QPainter, QPrinter, QTextOption, QPixmap
+from PyQt4.QtGui import QPainter, QPrinter, QTextOption, QPixmap, QColor
 
 inch = 300
 mm = 300 / 25.4
@@ -743,12 +743,19 @@ class Box(Element):
 
         Inherits Element.
     """
+    pen = QColor("black")  # FIXME: Keep inheritance while making border optional?
+
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
-
+        elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(),
+            QSizeF(self.width, self.height))
         self.renderSetup(painter)
-        painter.drawRect(QRectF(self.left + rect.left(), self.top + rect.top(),
+        if self.background:
+            painter.fillRect(elementRect, self._getBackground())
+        if self.pen is not None:
+            painter.drawRect(
+                QRectF(self.left + rect.left(), self.top + rect.top(),
                 self.width, self.height))
         self.renderTearDown(painter)
 
