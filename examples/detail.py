@@ -11,6 +11,7 @@ class DetailBandReport(Report):
     printIfEmpty = True
     margin = (10 * mm, 10 * mm, 10 * mm, 25 * mm)
     detail = DetailBand(
+        dataSet='fruits',
         border=QtGui.QColor("blue"),
         height=5 * mm,
         elements=[
@@ -25,4 +26,4 @@ r = DetailBandReport()
 printer = QtGui.QPrinter()
 printer.setOutputFileName('detail.pdf')
 fruits = ["Apple", "Orange", "Pear"]
-r.render(printer, fruits)
+r.render(printer, fruits=fruits)

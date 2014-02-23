@@ -11,6 +11,7 @@ class GroupedReport(Report):
     printIfEmpty = True
     margin = (10 * mm, 10 * mm, 10 * mm, 25 * mm)
     detail = DetailBand(
+        dataSet = 'foods',
         height=5 * mm,
         groups=[
             DetailGroup(
@@ -98,4 +99,4 @@ foods = [
         'sweet': 'yes'
         }
     ]
-r.render(printer, foods)
+r.render(printer, foods=foods)

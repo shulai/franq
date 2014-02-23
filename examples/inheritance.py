@@ -35,6 +35,7 @@ class InheritedReport(BaseReport):
         super(InheritedReport, self).__init__()
         self.header.elements.extend([])
     detail = DetailBand(
+        dataSet='data',
         height=5 * mm,
         elements=[
             Function(top=0 * mm, left=0 * mm, height=5 * mm, width=30 * mm,
@@ -50,4 +51,4 @@ r = InheritedReport()
 printer = QtGui.QPrinter()
 printer.setOutputFileName('inheritance.pdf')
 data = [(i, i * 3) for i in range(0, 100)]
-r.render(printer, data)
+r.render(printer, data=data)

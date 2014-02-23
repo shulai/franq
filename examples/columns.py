@@ -25,6 +25,7 @@ class DetailBandReport(Report):
             columns=2,
             detailBands=[
                 DetailBand(
+                    dataSet='data',
                     height=5 * mm,
                     columnSpace=10 * mm,
                     elements=[
@@ -52,4 +53,4 @@ r = DetailBandReport()
 printer = QtGui.QPrinter()
 printer.setOutputFileName('columns.pdf')
 data = [(i, i * 3) for i in range(0, 100)]
-r.render(printer, data)
+r.render(printer, data=data)
