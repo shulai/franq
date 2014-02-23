@@ -293,7 +293,7 @@ class ReportRenderer(object):
     def _printPageFooter(self, dataItem):
         if self._report.footer is not None:
             self.__y = self.__pageHeight - self.__footerHeight
-            self._renderBandPageWide(self._report.header, dataItem, False)
+            self._renderBandPageWide(self._report.footer, dataItem, False)
 
     def _printBegin(self, dataItem):
         if self._report.begin is not None:
@@ -325,21 +325,22 @@ class ReportRenderer(object):
         if detailBand.summary:
             self._renderBandColumnWide(detailBand.summary, dataItem, True)
 
-    def _continueInNewColumn(self, detailBand, dataItem):
-        self._printColumnFooter(detailBand, dataItem)
+    def _continueInNewColumn(self, dataItem):
+        self._printColumnFooter(self._currentDetailBand, dataItem)
         self.__col += 1
-        if self.__col < self.section.columns:
+        if self.__col < self._currentSection.columns:
             self.__y = self.__detailTop
-            self.__x += self.__columnWidth + self.section.columnSpace
+            self.__x += self.__columnWidth + self._currentSection.columnSpace
         else:
             self._printPageFooter(dataItem)
             self._newPage()
             self._printPageHeader(dataItem)
             self.__col = 0
             self.__x = 0
-            self._printColumnHeader(detailBand, dataItem)
+            self._printColumnHeader(self._currentDetailBand, dataItem)
 
     def _renderDetailBand(self, detailBand):
+        self._currentDetailBand = detailBand
         try:
             detailFooterHeight = detailBand.columnFooter.renderHeight()
         except AttributeError:
@@ -389,9 +390,18 @@ class ReportRenderer(object):
 
         except DataSourceExausted:
             pass  # Out of loop
+        # Print last round of group footers
+        for group in detailBand.groups[::-1]:
+            groupingLevel -= 1
+            group.value = new_group_value
+            if group.footer:
+                self._renderBandColumnWide(group.footer,
+                    ds.getPrevDataItem(), True)
+
         self._printDetailSummary(detailBand, ds.getPrevDataItem())
 
     def _renderSection(self, section):
+        self._currentSection = section
         # TODO: Setup section here
         self.__columnWidth = (self.__pageWidth - section.columnSpace *
             (section.columns - 1)) / section.columns
