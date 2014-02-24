@@ -489,14 +489,18 @@ class Band(BaseElement):
     child = None
     forceNewPage = False
     forceNewPageAfter = False
+    expand = None
     dataSet = None
 
-    def renderHeight(self, data_item=None):
+    def _bandRenderHeight(self, data_item=None):
         height = self.height
         for element in self.elements:
             elementBottom = element.top + element.renderHeight(data_item)
             if elementBottom > height:
                 height = elementBottom
+
+    def renderHeight(self, data_item=None):
+        height = self._bandRenderHeight(data_item)
         if self.child:
             height += self.child.renderHeight(data_item)
         return height
@@ -506,7 +510,12 @@ class Band(BaseElement):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
 
-        band_rect = QRectF(rect.left(), rect.top(), rect.width(), self.height)
+        if self.expand:
+            band_rect = QRectF(rect.left(), rect.top(),
+                 rect.width(), self._bandRenderHeight(data_item))
+        else:
+            band_rect = QRectF(rect.left(), rect.top(),
+                 rect.width(), self.height)
         self.renderSetup(painter)
         self.renderBorderAndBackground(painter, band_rect)
 
