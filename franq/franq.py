@@ -269,7 +269,7 @@ class ReportRenderer(object):
         height = band.renderHeight(dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewPage(dataItem)
-        rect = QRectF(0, self.__y, self.__pageWidth, height)
+        rect = QRectF(0.0, self.__y, self.__pageWidth, height)
         band.render(self.__painter, rect, dataItem)
         self.__y += height
 
@@ -337,7 +337,7 @@ class ReportRenderer(object):
             self._printPageHeader(dataItem)
             self.__col = 0
             self.__x = 0
-            self._printColumnHeader(self._currentDetailBand, dataItem)
+        self._printColumnHeader(self._currentDetailBand, dataItem)
 
     def _renderDetailBand(self, detailBand):
         self._currentDetailBand = detailBand
@@ -356,6 +356,7 @@ class ReportRenderer(object):
         try:
             dataItem = ds.nextDataItem()
             self._printDetailBegin(detailBand, dataItem)
+            self._printColumnHeader(detailBand, dataItem)
             groupingLevel = 0
             # Print first round of group headers
             for group in detailBand.groups:
@@ -398,6 +399,7 @@ class ReportRenderer(object):
                 self._renderBandColumnWide(group.footer,
                     ds.getPrevDataItem(), True)
 
+        self._printColumnFooter(detailBand, ds.getPrevDataItem())
         self._printDetailSummary(detailBand, ds.getPrevDataItem())
 
     def _renderSection(self, section):
@@ -498,6 +500,7 @@ class Band(BaseElement):
             elementBottom = element.top + element.renderHeight(data_item)
             if elementBottom > height:
                 height = elementBottom
+        return height
 
     def renderHeight(self, data_item=None):
         height = self._bandRenderHeight(data_item)
