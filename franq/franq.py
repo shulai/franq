@@ -458,7 +458,14 @@ class ReportRenderer(object):
         else:
             self.__footerHeight = 0
 
-        for section in rpt.sections:
+        if rpt.sections:
+            sections = rpt.sections
+        elif rpt.detailBand:
+            sections = [Section(detailBands=[rpt.detailBand])]
+        else:
+            sections = None
+
+        for section in sections:
             self._renderSection(section)
 
         self._printSummary(dataItem)
