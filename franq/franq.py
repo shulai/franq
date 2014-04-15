@@ -223,6 +223,10 @@ class DataSource:
         self._iterator = iter(dataSet)
         self._prev = None
         self._item = None
+        try:
+            self.nextDataItem()
+        except DataSourceExausted:
+            pass
 
     def getDataItem(self):
         return self._item
@@ -233,7 +237,7 @@ class DataSource:
     def nextDataItem(self):
         self._prev = self._item
         try:
-            self._item = self._iterator.next()
+            self._item = next(self._iterator)
         except StopIteration:
             self._item = None
             raise DataSourceExausted()
@@ -261,6 +265,8 @@ class ReportRenderer(object):
         self.__y = 0.0
 
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
+        # Band own's dataset overrides provided by the caller
+        # for detail bands it gets the same items as provided by the renderer!
         try:
             ds = self._dataSources[band.dataSet]
             dataItem = ds.getDataItem()
@@ -354,7 +360,7 @@ class ReportRenderer(object):
             ds = self._dataSources[self._report.dataSet]
 
         try:
-            dataItem = ds.nextDataItem()
+            dataItem = ds.getDataItem()
             self._printDetailBegin(detailBand, dataItem)
             self._printColumnHeader(detailBand, dataItem)
             groupingLevel = 0
@@ -424,6 +430,9 @@ class ReportRenderer(object):
         rpt.renderSetup(self.__painter)
         rect = printer.pageRect()
         rect.moveTo(0.0, 0.0)
+
+        if rpt.on_before_print is not None:
+            rpt.on_before_print()
 
         # 5
         rpt.renderBorderAndBackground(self.__painter, rect)
