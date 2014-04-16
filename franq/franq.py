@@ -449,7 +449,7 @@ class ReportRenderer(object):
             for k, ds in dataSources.iteritems()}
         try:
             ds = self._dataSources[rpt.dataSet]
-            dataItem = ds.nextDataItem()
+            dataItem = ds.getDataItem()
         except (KeyError, DataSourceExausted):
             dataItem = None
 
@@ -640,6 +640,15 @@ class TextElement(Element):
     textOptions = QTextOption()
 
     def renderHeight(self, data_item):
+        # TODO: Make renderHeight calculate required height
+        # fm = QFontMetrics(font)
+        # return fm.boundingRect(self.left, self.top, self.width, self.height,
+        #    self.textOptions.flags(), self._text()).height()
+        # Required:
+        # Implement self._text() in descendants, call _text() in _render and
+        # rename it to render, delete render() in descendants
+        # QFontMetrics requires font, will need font from band/report
+        # either as a parameter or receiving painter as a parameter
         return self.height
 
     def _render(self, painter, rect, text):
