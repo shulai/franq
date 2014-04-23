@@ -638,6 +638,7 @@ class TextElement(Element):
         * textOptions: QTextOption, mainly used for text alignment.
     """
     textOptions = QTextOption()
+    noRepeat = False
     _lastText = None
 
     def renderHeight(self, data_item):
