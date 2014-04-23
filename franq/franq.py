@@ -638,6 +638,7 @@ class TextElement(Element):
         * textOptions: QTextOption, mainly used for text alignment.
     """
     textOptions = QTextOption()
+    _lastText = None
 
     def renderHeight(self, data_item):
         # TODO: Make renderHeight calculate required height
@@ -652,6 +653,9 @@ class TextElement(Element):
         return self.height
 
     def _render(self, painter, rect, text):
+        if self.noRepeat and self._lastText == text:
+            return
+        self._lastText = text
         self.renderSetup(painter)
         self.renderBorderAndBackground(painter, rect)
         if self.font:
