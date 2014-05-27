@@ -360,10 +360,10 @@ class ReportRenderer(object):
             ds = self._dataSources[self._report.dataSet]
 
         try:
+            groupingLevel = 0
             dataItem = ds.getDataItem()
             self._printDetailBegin(detailBand, dataItem)
             self._printColumnHeader(detailBand, dataItem)
-            groupingLevel = 0
             # Print first round of group headers
             for group in detailBand.groups:
                 groupingLevel += 1
@@ -397,13 +397,14 @@ class ReportRenderer(object):
 
         except DataSourceExausted:
             pass  # Out of loop
-        # Print last round of group footers
-        for group in detailBand.groups[::-1]:
-            groupingLevel -= 1
-            group.value = new_group_value
-            if group.footer:
-                self._renderBandColumnWide(group.footer,
-                    ds.getPrevDataItem(), True)
+        # Print last round of group footers, only if datasource not empty
+        if ds.getPrevDataItem():
+            for group in detailBand.groups[::-1]:
+                groupingLevel -= 1
+                # group.value = new_group_value
+                if group.footer:
+                    self._renderBandColumnWide(group.footer,
+                        ds.getPrevDataItem(), True)
 
         self._printColumnFooter(detailBand, ds.getPrevDataItem())
         self._printDetailSummary(detailBand, ds.getPrevDataItem())
