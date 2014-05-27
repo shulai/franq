@@ -469,8 +469,8 @@ class ReportRenderer(object):
 
         if rpt.sections:
             sections = rpt.sections
-        elif rpt.detailBand:
-            sections = [Section(detailBands=[rpt.detailBand])]
+        elif rpt.detail:
+            sections = [Section(detailBands=[rpt.detail])]
         else:
             sections = None
 
