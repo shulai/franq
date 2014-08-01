@@ -20,7 +20,8 @@ import sip
 sip.setapi("QString", 2)
 
 from PyQt4.QtCore import QPointF, QRectF, QSizeF
-from PyQt4.QtGui import QPainter, QPrinter, QTextOption, QPixmap, QColor
+from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
+    QTextDocument)
 
 inch = 300
 mm = 300 / 25.4
@@ -345,7 +346,13 @@ class ReportRenderer(object):
             self.__x = 0
         self._printColumnHeader(self._currentDetailBand, dataItem)
 
-    def _renderDetailBand(self, detailBand):
+    def _renderDetailBand(self, detailBand, dataSet=None):
+        """
+            Render a dataset into a detail band.
+            If a dataset is not provided, it is determined using either
+            the band's dataSet attribute or the report dataSet attribute
+            The dataset attribute is provided for subdetails.
+        """
         self._currentDetailBand = detailBand
         try:
             detailFooterHeight = detailBand.columnFooter.renderHeight()
@@ -354,7 +361,9 @@ class ReportRenderer(object):
         self.__detailBottom = self.__pageHeight - (self.__footerHeight +
                 detailFooterHeight)
 
-        if detailBand.dataSet is not None:
+        if dataSet:
+            ds = DataSource(dataSet)
+        elif detailBand.dataSet is not None:
             ds = self._dataSources[detailBand.dataSet]
         else:
             ds = self._dataSources[self._report.dataSet]
@@ -382,6 +391,10 @@ class ReportRenderer(object):
                         self._renderBandColumnWide(group.header, dataItem, True)
 
                 self._renderBandColumnWide(detailBand, dataItem, True)
+
+                for subdetail in detailBand.subdetails:
+                    self._renderDetailBand(subdetail,
+                        getattr(dataItem, subdetail.dataSet))
 
                 dataItem = ds.nextDataItem()
 
@@ -468,14 +481,7 @@ class ReportRenderer(object):
         else:
             self.__footerHeight = 0
 
-        if rpt.sections:
-            sections = rpt.sections
-        elif rpt.detail:
-            sections = [Section(detailBands=[rpt.detail])]
-        else:
-            sections = None
-
-        for section in sections:
+        for section in rpt.sections:
             self._renderSection(section)
 
         self._printSummary(dataItem)
@@ -559,6 +565,7 @@ class DetailBand(Band):
         Properties
         ----------
         * groups: List of DetailGroup, default empty list.
+        * subdetails: List of DetailBand, default empty list.
         * columnHeader: Header Band for the column, useful for detail titles,
             default None.
         * columnFooter: Footer Band for the column, useful for detail summaries,
@@ -568,6 +575,7 @@ class DetailBand(Band):
 
     """
     groups = []
+    subdetails = []
     forceNewColumn = False
     columnHeader = None
     columnFooter = None
@@ -641,6 +649,7 @@ class TextElement(Element):
     textOptions = QTextOption()
     noRepeat = False
     _lastText = None
+    richText = False
 
     def renderHeight(self, data_item):
         # TODO: Make renderHeight calculate required height
@@ -667,7 +676,18 @@ class TextElement(Element):
             QSizeF(self.width, self.height))
         if self.font:
             painter.setFont(parent_font)
-        painter.drawText(elementRect, unicode(text), self.textOptions)
+        if self.richText:
+            doc = QTextDocument()
+            doc.documentLayout().setPaintDevice(painter.device())
+            doc.setPageSize(elementRect.size())
+            doc.defaultFont = painter.font()
+            doc.setHtml(text)
+            painter.translate(elementRect.topLeft())
+            doc.drawContents(painter)
+            painter.resetTransform()
+            print doc.toHtml()
+        else:
+            painter.drawText(elementRect, unicode(text), self.textOptions)
         self.renderTearDown(painter)
 
 
