@@ -20,16 +20,15 @@ from setuptools import setup
 
 setup(
     name='franq',
-    version='0.2',
+    version='0.9',
     description="PyQt-based reporting framework",
     author="Julio Cesar Gazquez",
     author_email='julio@mebamutual.com.ar',
-    url='http://jotacege.com.ar/franq',
     packages=['franq', 'franq.designer'],
     package_dir={'franq.designer': 'designer'},
     use_2to3 = True,
     long_description="""
-    Franq is a PyQt4 based reporting framework, similar to Geraldo Reports
+    Franq is a PyQt4 based reporting framework
     """,
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v2 or later "
