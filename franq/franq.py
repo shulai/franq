@@ -114,7 +114,8 @@ class Report(BaseElement):
 
         Properties
         ----------
-        * paperSize: QPrinter.PageSize
+        * paperSize: QPrinter.PaperSize
+        * paperOrientation: QPrinter.Orientation
         * margins: list/tuple of 4 floats, use mm/cm/inch constants
             as multipliers
         * headerInFirstPage: Boolean, default True
@@ -139,6 +140,7 @@ class Report(BaseElement):
     summary = None
 
     paperSize = QPrinter.A4
+    paperOrientation = QPrinter.Portrait
     margins = (10 * mm, 10 * mm, 10 * mm, 10 * mm)
     headerInFirstPage = True
     footerInLastPage = True
@@ -260,6 +262,7 @@ class ReportRenderer(object):
         rpt = self._report
         self.__printer.setResolution(300)
         self.__printer.setPaperSize(rpt.paperSize)
+        self.__printer.setOrientation(rpt.paperOrientation)
         self.__printer.setPageMargins(
             rpt.margins[3], rpt.margins[0],
             rpt.margins[1], rpt.margins[2],
@@ -741,8 +744,9 @@ class Field(TextElement):
                 prop = propertyparts.pop(0)
             value = getattr(obj, prop)
         except AttributeError:
-            warn("Attribute {} ({}) not found in the model {}({})".format(
-                self.attrName, prop, data_item, type(data_item)))
+            #warn("Attribute {} ({}) not found in the model {}({})".format(
+            #    self.attrName, prop, data_item, type(data_item)))
+            value='<Error>'
         return value
 
     def render(self, painter, rect, data_item):
