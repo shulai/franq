@@ -163,6 +163,8 @@ class Report(BaseElement):
         if summary:
             self.summary = summary
 
+        self.setup()
+
         if self.begin is not None and not isinstance(self.begin, Band):
             self.begin = self.begin()
         if self.header is not None and not isinstance(self.header, Band):
@@ -180,6 +182,9 @@ class Report(BaseElement):
             self.footer = self.footer()
         if self.summary is not None and not isinstance(self.summary, Band):
             self.summary = self.summary()
+
+    def setup(self):
+        pass
 
     def render(self, printer, **dataSources):
 
@@ -717,11 +722,28 @@ class Field(TextElement):
 
         Properties
         ----------
-        * fieldName: str, attribute name.
+        * attrName: str, attribute name.
         * formatStr: unicode, optional Python standard formatting string,
             default None.
     """
     formatStr = None
+
+    def _get_value(self, data_item):
+        value = None
+
+        propertyparts = self.attrName.split('.')
+
+        try:
+            obj = data_item
+            prop = propertyparts.pop(0)
+            while propertyparts:
+                obj = getattr(obj, prop)
+                prop = propertyparts.pop(0)
+            value = getattr(obj, prop)
+        except AttributeError:
+            warn("Attribute {} ({}) not found in the model {}({})".format(
+                self.attrName, prop, data_item, type(data_item)))
+        return value
 
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
@@ -729,10 +751,9 @@ class Field(TextElement):
 
         if self.formatStr:
             self._render(painter, rect,
-                self.formatStr.format(getattr(data_item, self.fieldName,
-                    "<Error>")))
+                self.formatStr.format(self._get_value(data_item)))
         else:
-            v = getattr(data_item, self.fieldName, "<Error>")
+            v = self._get_value(data_item)
             if v is None:
                 v = ''
             self._render(painter, rect, v)
