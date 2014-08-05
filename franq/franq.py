@@ -676,14 +676,12 @@ class TextElement(Element):
             return
         self._lastText = text
         self.renderSetup(painter)
-        self.renderBorderAndBackground(painter, rect)
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
         elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(),
             QSizeF(self.width, self.height))
-        if self.font:
-            painter.setFont(parent_font)
+        self.renderBorderAndBackground(painter, elementRect)
         if self.richText:
             doc = QTextDocument()
             doc.documentLayout().setPaintDevice(painter.device())
@@ -746,7 +744,7 @@ class Field(TextElement):
         except AttributeError:
             #warn("Attribute {} ({}) not found in the model {}({})".format(
             #    self.attrName, prop, data_item, type(data_item)))
-            value='<Error>'
+            value = '<Error>'
         return value
 
     def render(self, painter, rect, data_item):
