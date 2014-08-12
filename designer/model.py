@@ -1,13 +1,21 @@
 # -*- coding: utf-8 -*-
 
-import json
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QFont, QColor
+import franq
 
-mm = 300 / 25.4
+mm = franq.mm
+
+
+def load_font(f):
+    return QFont(f['family'], f['size'], f['weight'], f['italic'])
 
 
 class ElementModel(object):
+
+    def __init__(self, parent):
+        super(ElementModel, self).__init__()
+        self.parent = parent
+        self.font = None
 
     def load(self, json):
         self.top = json['top']
@@ -17,73 +25,93 @@ class ElementModel(object):
         # TODO: Load values if available
         self.pen = None
         self.background = None
-        self.font = None
+        if 'font' in json:
+            self.font = load_font(json['font'])
+
+    def save(self):
+        json = {
+            'top': self.top,
+            'left': self.left,
+            'width': self.width,
+            'height': self.height
+            }
+        return json
+
+    def active_font(self):
+        return self.font if self.font else self.parent.active_font()
 
 
 class TextModel(ElementModel):
 
     def __init__(self, parent):
-        super(TextModel, self).__init__()
-        self.view = TextView(parent.view)
-
-
-class TextView(QtGui.QWidget):
-    pass
+        super(TextModel, self).__init__(parent)
+        self.top = 0.0
+        self.left = 0.0
+        self.width = 20 * mm
+        self.height = 4 * mm
 
 
 class LabelModel(TextModel):
 
+    def __init__(self, parent):
+        super(LabelModel, self).__init__(parent)
+        self.text = 'Label'
+
     def load(self, json):
-        super(LabelModel, self).load()
+        super(LabelModel, self).load(json)
         self.text = json['text']
+
+    def save(self):
+        json = super(LabelModel, self).save()
+        json['type'] = 'label'
+        json['text'] = self.text
+        return json
 
 
 class FieldModel(TextModel):
 
     def load(self, json):
-        super(FieldModel, self).load()
-        self.fieldName = json['fieldName']
+        super(FieldModel, self).load(json)
+        self.attrName = json['attrName']
         self.format = json['format']
+
+    def save(self):
+        json = super(FieldModel, self).save()
+        json['type'] = 'field'
+        json['attrName'] = self.attrName
+        json['format'] = self.format
+        return json
 
 
 class FunctionModel(TextModel):
 
     def load(self, json):
-        super(FunctionModel, self).load()
+        super(FunctionModel, self).load(json)
         self.func = json['func']
+
+    def save(self):
+        json = super(FunctionModel, self).save()
+        json['type'] = 'function'
+        json['func'] = self.func
+        return json
 
 
 class LineModel(ElementModel):
 
-    def __init__(self, parent):
+    def __init__(self):
         super(LineModel, self).__init__()
-        self.view = LineView(parent.view)
-
-
-class LineView(QtGui.QWidget):
-    pass
 
 
 class BoxModel(ElementModel):
 
-    def __init__(self, parent):
+    def __init__(self):
         super(BoxModel, self).__init__()
-        self.view = BoxView(parent.view)
-
-
-class BoxView(QtGui.QWidget):
-    pass
 
 
 class ImageModel(ElementModel):
 
-    def __init__(self, parent):
+    def __init__(self):
         super(ImageModel, self).__init__()
-        self.view = ImageView(parent.view)
-
-
-class ImageView(QtGui.QWidget):
-    pass
 
 
 element_classes = {
@@ -98,17 +126,21 @@ element_classes = {
 
 class BandModel(object):
 
-    def __init__(self, parent):
+    def __init__(self, description, parent):
+        self.description = description
         self.parent = parent
         self.elements = []
-        self.view = BandView(self.parent.view)
+        self.height = 20 * mm
+
+    def active_font(self):
+        return self.font if self.font else self.parent.active_font()
 
     def load(self, json):
 
         def element(el_json):
-            class_, args = el_json
+            class_ = el_json['type']
             e = element_classes[class_](self)
-            e.load(args)
+            e.load(el_json)
             return e
 
         self.height = json['height']
@@ -117,90 +149,126 @@ class BandModel(object):
         self.background = None
         self.font = None
 
-        if json['elements']:
+        if 'elements' in json and json['elements']:
             self.elements = [element(e) for e in json['elements']]
 
+    def save(self):
+        # TODO
+        json = {
+            'height': self.height
+            }
+        if hasattr(self, 'elements') and self.elements:
+            json['elements'] = [e.save() for e in self.elements]
+        return json
 
-class BandView(QtGui.QWidget):
+
+class DetailBandModel(BandModel):
+
     def __init__(self, parent):
-        super(BandView, self).__init__(parent)
+        super(DetailBandModel, self).__init__('Detail Band', parent)
+        self.dataSet = None
 
-    def paintEvent(self, event):
+    def load(self, json):
+        super(DetailBandModel, self).load(json)
+        if 'dataSet' in json:
+            self.dataSet = json['dataSet']
 
-        super(BandView, self).paintEvent(event)
-        painter = QtGui.QPainter(self)
-        pen = QtGui.QPen(Qt.DotLine)
-        pen.setColor(QtGui.QColor(192, 192, 255))
-        painter.setPen(pen)
-        rect = self.rect()
-        painter.drawLine(rect.topLeft(), rect.topRight())
-        painter.drawLine(rect.topRight(), rect.bottomRight())
-        painter.drawLine(rect.bottomLeft(), rect.bottomRight())
-        painter.drawLine(rect.topLeft(), rect.bottomLeft())
+
+class SectionModel(object):
+
+    def __init__(self, parent):
+        self.parent = parent
+        self.columns = 1
+        self.columnSpace = 0.0
+        self.detailBands = [DetailBandModel(self)]
+
+    def load(self, json):
+        self.columns = json['columns']
+        self.columnSpace = json['columnSpace']
+        if json['detailBands']:
+            self.detailBands = []
+            for json_detail in json['detailBands']:
+                detail = DetailBandModel(self)
+                detail.load(json_detail)
+                self.detailBands.append(detail)
+
+    def save(self):
+        json = {
+            'columns': self.columns,
+            'columnSpace': self.columnSpace,
+            }
+        if self.detailBands:
+            json['detailBands'] = [detail.save() for detail in self.detailBands]
+        return json
 
 
 class ReportModel(object):
 
-    def __init__(self, designer_model, container):
+    def __init__(self):
 
         super(ReportModel, self).__init__()
-        self.designer_model = designer_model
+
         # Ok?
         self.title = u'Report'
-        self._paperSize = 'A4'
-        self._width = 210 * mm
-        self._height = 297 * mm
+        self.paperSize = franq.Report.paperSize
+        self.paperOrientation = franq.Report.paperOrientation
+        self.font = QFont('Helvetica', 12 * franq.inch / 72)
 
+        self.margins = franq.Report.margins
         self.begin = None
         self.header = None
         self.detail = None
         self.footer = None
         self.summary = None
+        self.sections = []
+        self.dataSet = None
 
-        self.view_container = container
-        self.view = ReportView(container, self)
-        self.view.resize(self._width * self.designer_model.scale / 300,
-            self._height * self.designer_model.scale / 300)
+    def active_font(self):
+        return self.font
 
     def load(self, json):
+        """
+        Rebuild report structure from json.load() output
+        """
+        if 'title' in json:
+            self.title = json['title']
+        if 'dataSet' in json:
+            self.dataSet = json['dataSet']
 
-        if json['begin']:
-            self.begin = BandModel(self)
+        if 'begin' in json and json['begin']:
+            self.begin = BandModel('Begin Band', self)
             self.begin.load(json['begin'])
-        if json['header']:
-            self.header = BandModel(self)
+        if 'header' in json and json['header']:
+            self.header = BandModel('Header Band', self)
             self.header.load(json['header'])
-        if json['detail']:
-            self.detail = BandModel(self)
-            self.detail.load(json['detail'])
-        if json['footer']:
-            self.footer = BandModel(self)
+        if 'sections' in json and json['sections']:
+            for json_section in json['sections']:
+                section = SectionModel(self)
+                section.load(json_section)
+                self.sections.append(section)
+        if 'footer' in json and json['footer']:
+            self.footer = BandModel('Footer Band', self)
             self.footer.load(json['footer'])
-        if json['summary']:
-            self.summary = BandModel(self)
+        if 'summary' in json and json['summary']:
+            self.summary = BandModel('Summary Band', self)
             self.summary.load(json['summary'])
 
-
-class ReportView(QtGui.QWidget):
-
-    def __init__(self, parent, model):
-        super(ReportView, self).__init__(parent)
-        self.model = model
-        self.move(10, 10)  # Fix
-
-    #def paintEvent(self, event):
-
-        #painter = QtGui.QPainter(self)
-
-
-class DesignerModel(object):
-
-    def __init__(self, container, filename=None):
-        self.filename = filename
-        self.scale = 100
-        self.displayScale = 1
-
-        self.report = ReportModel(self, container)
-
-        if self.filename:
-            self.report.load(json.load(open(self.filename)))
+    def save(self):
+        """
+        Convert report structure to serializable form
+        """
+        json = {
+            'title': self.title,
+            'dataSet': self.dataSet
+            }
+        if self.begin:
+            json['begin'] = self.begin.save()
+        if self.header:
+            json['header'] = self.header.save()
+        if self.sections:
+            json['sections'] = [section.save() for section in self.sections]
+        if self.footer:
+            json['footer'] = self.footer.save()
+        if self.summary:
+            json['summary'] = self.summary.save()
+        return json
