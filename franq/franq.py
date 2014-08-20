@@ -272,7 +272,6 @@ class ReportRenderer(object):
         self.__printer.newPage()
         self.page += 1
         self.__y = 0.0
-        rpt.renderBorderAndBackground(self.__painter, rect)
 
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
         # Band own's dataset overrides provided by the caller
@@ -731,6 +730,7 @@ class Field(TextElement):
         If both formatter and formatStr are set, formatter is used.
     """
     formatStr = None
+    formatter = None
 
     def _get_value(self, data_item):
         value = None
