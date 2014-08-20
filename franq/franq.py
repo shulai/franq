@@ -724,8 +724,10 @@ class Field(TextElement):
         Properties
         ----------
         * attrName: str, attribute name.
+        * formatter: callable, optional, default None.
         * formatStr: unicode, optional Python standard formatting string,
             default None.
+        If both formatter and formatStr are set, formatter is used.
     """
     formatStr = None
 
@@ -751,7 +753,10 @@ class Field(TextElement):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
 
-        if self.formatStr:
+        if self.formatter:
+            self._render(painter, rect,
+                self.formatter(self._get_value(data_item)))
+        elif self.formatStr:
             self._render(painter, rect,
                 self.formatStr.format(self._get_value(data_item)))
         else:
