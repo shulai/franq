@@ -272,6 +272,7 @@ class ReportRenderer(object):
         self.__printer.newPage()
         self.page += 1
         self.__y = 0.0
+        rpt.renderBorderAndBackground(self.__painter, rect)
 
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
         # Band own's dataset overrides provided by the caller
