@@ -328,8 +328,7 @@ class ReportRenderer(object):
 
     def _printColumnFooter(self, detailBand, dataItem):
         if detailBand.columnFooter is not None:
-            self.__y = self.__pageHeight - (self.__footerHeight +
-                self.__columnFooterHeight)
+            self.__y = self.__detailBottom
             self._renderBandColumnWide(detailBand.columnFooter, dataItem, False)
 
     def _printDetailBegin(self, detailBand, dataItem):
