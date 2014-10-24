@@ -19,9 +19,9 @@
 import sip
 sip.setapi("QString", 2)
 
-from PyQt4.QtCore import QPointF, QRectF, QSizeF
+from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
 from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
-    QTextDocument)
+    QTextDocument, QFontMetricsF)
 
 inch = 300
 mm = 300 / 25.4
@@ -281,7 +281,7 @@ class ReportRenderer(object):
             dataItem = ds.getDataItem()
         except KeyError:
             pass
-        height = band.renderHeight(dataItem)
+        height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewPage(dataItem)
         rect = QRectF(0.0, self.__y, self.__pageWidth, height)
@@ -294,7 +294,7 @@ class ReportRenderer(object):
             dataItem = ds.getDataItem()
         except KeyError:
             pass
-        height = band.renderHeight(dataItem)
+        height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewColumn(dataItem)
         rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
@@ -362,7 +362,8 @@ class ReportRenderer(object):
         """
         self._currentDetailBand = detailBand
         try:
-            detailFooterHeight = detailBand.columnFooter.renderHeight()
+            detailFooterHeight = detailBand.columnFooter.renderHeight(
+                self.__painter)
         except AttributeError:
             detailFooterHeight = 0
         self.__detailBottom = self.__pageHeight - (self.__footerHeight +
@@ -483,7 +484,7 @@ class ReportRenderer(object):
         # If I don't, I'll be never sure when I must print the footer
         # just by looking at a single detail item
         if rpt.footer is not None:
-            self.__footerHeight = rpt.footer.renderHeight()
+            self.__footerHeight = rpt.footer.renderHeight(self.__painter)
         else:
             self.__footerHeight = 0
 
@@ -524,18 +525,19 @@ class Band(BaseElement):
     dataSet = None
     renderBand = True
 
-    def _bandRenderHeight(self, data_item=None):
+    def _bandRenderHeight(self, painter, data_item=None):
         height = self.height
         for element in self.elements:
-            elementBottom = element.top + element.renderHeight(data_item)
+            elementBottom = element.top + element.renderHeight(painter,
+                data_item)
             if elementBottom > height:
                 height = elementBottom
         return height
 
-    def renderHeight(self, data_item=None):
-        height = self._bandRenderHeight(data_item)
+    def renderHeight(self, painter, data_item=None):
+        height = self._bandRenderHeight(painter, data_item)
         if self.child:
-            height += self.child.renderHeight(data_item)
+            height += self.child.renderHeight(painter, data_item)
         return height
 
     def render(self, painter, rect, data_item=None):
@@ -641,7 +643,7 @@ class Element(BaseElement):
     width = 100 * mm
     height = 5 * mm
 
-    def renderHeight(self, data_item):
+    def renderHeight(self, painter, data_item):
         return self.height
 
     def render(painter, rect, data_item):
@@ -658,23 +660,32 @@ class TextElement(Element):
         ----------
         * textOptions: QTextOption, mainly used for text alignment.
         * noRepeat: Default False
+        * expand: Default True
     """
     textOptions = QTextOption()
     noRepeat = False
     _lastText = None
     richText = False
+    expand = False
 
-    def renderHeight(self, data_item):
+    def renderHeight(self, painter, data_item):
+        if self.expand and not self.richText:
+            fm = QFontMetricsF(painter.font())
+            text = self._text(data_item)
+            bound_rect = fm.boundingRect(
+                    QRectF(self.left, self.top, self.width, self.height),
+                    self.textOptions.flags() | Qt.TextWordWrap,
+                    text)
+            return max(self.height, bound_rect.height())
+        else:
+            return self.height
         # TODO: Make renderHeight calculate required height
-        # fm = QFontMetrics(font)
-        # return fm.boundingRect(self.left, self.top, self.width, self.height,
-        #    self.textOptions.flags(), self._text()).height()
         # Required:
         # Implement self._text() in descendants, call _text() in _render and
         # rename it to render, delete render() in descendants
         # QFontMetrics requires font, will need font from band/report
         # either as a parameter or receiving painter as a parameter
-        return self.height
+        #return self.height
 
     def _render(self, painter, rect, text):
         if self.noRepeat and self._lastText == text:
@@ -698,7 +709,10 @@ class TextElement(Element):
             painter.resetTransform()
             print doc.toHtml()
         else:
-            painter.drawText(elementRect, unicode(text), self.textOptions)
+            textOptions = self.textOptions
+            textOptions.setWrapMode(QTextOption.WordWrap)
+            painter.drawText(elementRect, unicode(text),
+                textOptions)
         self.renderTearDown(painter)
 
 
@@ -712,6 +726,10 @@ class Label(TextElement):
         ----------
         * text: unicode, text value of the Label.
     """
+
+    def _text(self, data_item):
+        return self.text
+
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
@@ -755,6 +773,17 @@ class Field(TextElement):
             value = '<Error>'
         return value
 
+    def _text(self, data_item):
+        if self.formatter:
+            return self.formatter(self._get_value(data_item))
+        elif self.formatStr:
+            return self.formatStr.format(self._get_value(data_item))
+        else:
+            v = self._get_value(data_item)
+            if v is None:
+                v = ''
+            return v
+
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
@@ -783,6 +812,11 @@ class Function(TextElement):
         * func: callable, usually a lambda or a report method, receives the
             data item as parameter, returns unicode value to render.
     """
+
+    def _text(self, data_item):
+        # TODO: avoiding calling func twice
+        return self.func(data_item)
+
     def render(self, painter, rect, data_item):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
