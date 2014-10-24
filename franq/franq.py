@@ -285,8 +285,8 @@ class ReportRenderer(object):
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewPage(dataItem)
         rect = QRectF(0.0, self.__y, self.__pageWidth, height)
-        band.render(self.__painter, rect, dataItem)
-        self.__y += height
+        if band.render(self.__painter, rect, dataItem):
+            self.__y += height
 
     def _renderBandColumnWide(self, band, dataItem, checkEnd=True):
         try:
@@ -298,8 +298,8 @@ class ReportRenderer(object):
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewColumn(dataItem)
         rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
-        band.render(self.__painter, rect, dataItem)
-        self.__y += height
+        if band.render(self.__painter, rect, dataItem):
+            self.__y += height
 
     def _printPageHeader(self, dataItem):
         if self._report.header is not None:
@@ -522,6 +522,7 @@ class Band(BaseElement):
     forceNewPageAfter = False
     expand = None
     dataSet = None
+    renderBand = True
 
     def _bandRenderHeight(self, data_item=None):
         height = self.height
@@ -539,8 +540,12 @@ class Band(BaseElement):
 
     def render(self, painter, rect, data_item=None):
 
+        self.renderBand = True
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
+
+        if not self.renderBand:
+            return False
 
         if self.expand:
             band_rect = QRectF(rect.left(), rect.top(),
@@ -560,6 +565,7 @@ class Band(BaseElement):
             self.child.render(painter, child_rect, data_item)
 
         self.renderTearDown(painter)
+        return True
 
 
 class DetailBand(Band):
@@ -651,6 +657,7 @@ class TextElement(Element):
         Properties
         ----------
         * textOptions: QTextOption, mainly used for text alignment.
+        * noRepeat: Default False
     """
     textOptions = QTextOption()
     noRepeat = False
