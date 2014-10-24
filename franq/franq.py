@@ -426,7 +426,6 @@ class ReportRenderer(object):
                     self._renderBandColumnWide(group.footer,
                         ds.getPrevDataItem(), True)
 
-        self._printColumnFooter(detailBand, ds.getPrevDataItem())
         self._printDetailSummary(detailBand, ds.getPrevDataItem())
 
     def _renderSection(self, section):
@@ -573,12 +572,12 @@ class DetailBand(Band):
         ----------
         * groups: List of DetailGroup, default empty list.
         * subdetails: List of DetailBand, default empty list.
-        * columnHeader: Header Band for the column, useful for detail titles,
+        * columnHeader: Header Band for the detail/column,
             default None.
-        * columnFooter: Footer Band for the column, useful for detail summaries,
+        * columnFooter: Footer Band for the detail/column,
             default None.
-        * detailBegin: Band preceding the detail, default None.
-        * detailSummary: Band after the detail, default None.
+        * begin: Band preceding the detail, default None.
+        * summary: Band after the detail, default None.
 
     """
     groups = []
