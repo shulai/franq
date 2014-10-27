@@ -676,15 +676,18 @@ class TextElement(Element):
     richText = False
     expand = False
 
+    def _expandHeight(self, painter, text):
+        fm = QFontMetricsF(painter.font())
+        bound_rect = fm.boundingRect(
+            QRectF(self.left, self.top, self.width, self.height),
+            self.textOptions.flags() | Qt.TextWordWrap,
+            text)
+        return max(self.height, bound_rect.height())
+
     def renderHeight(self, painter, data_item):
+        text = self._text(data_item)
         if self.expand and not self.richText:
-            fm = QFontMetricsF(painter.font())
-            text = self._text(data_item)
-            bound_rect = fm.boundingRect(
-                    QRectF(self.left, self.top, self.width, self.height),
-                    self.textOptions.flags() | Qt.TextWordWrap,
-                    text)
-            return max(self.height, bound_rect.height())
+            return self._expandHeight(painter, text)
         else:
             return self.height
         # TODO: Make renderHeight calculate required height
@@ -703,8 +706,14 @@ class TextElement(Element):
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
-        elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(),
-            QSizeF(self.width, self.height))
+        if self.expand:
+            effectiveHeight = self._expandHeight(painter, text)
+        else:
+            effectiveHeight = self.height
+        elementRect = QRectF(
+            QPointF(self.left, self.top) + rect.topLeft(),
+            QSizeF(self.width, effectiveHeight))
+
         self.renderBorderAndBackground(painter, elementRect)
         if self.richText:
             doc = QTextDocument()
