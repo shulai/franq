@@ -268,12 +268,19 @@ class ReportRenderer(object):
             rpt.margins[1], rpt.margins[2],
             QPrinter.DevicePixel)
 
-    def _newPage(self):
+    def _newPage(self, dataItem):
+        if (self._report.footer
+                and self.__y < self.__pageHeight - self.__footerHeight):
+            self._printPageFooter(dataItem)
+
         self.__printer.newPage()
         self.page += 1
         self.__y = 0.0
+        self._printPageHeader(dataItem)
 
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
+        if band.forceNewPage:
+            self._newPage(dataItem)
         # Band own's dataset overrides provided by the caller
         # for detail bands it gets the same items as provided by the renderer!
         try:
@@ -287,8 +294,12 @@ class ReportRenderer(object):
         rect = QRectF(0.0, self.__y, self.__pageWidth, height)
         if band.render(self.__painter, rect, dataItem):
             self.__y += height
+        if band.forceNewPageAfter:
+            self._newPage(dataItem)
 
     def _renderBandColumnWide(self, band, dataItem, checkEnd=True):
+        if band.forceNewPage:
+            self._newPage(dataItem)
         try:
             ds = self._dataSources[band.dataSet]
             dataItem = ds.getDataItem()
@@ -300,6 +311,8 @@ class ReportRenderer(object):
         rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
         if band.render(self.__painter, rect, dataItem):
             self.__y += height
+        if band.forceNewPageAfter:
+            self._newPage(dataItem)
 
     def _printPageHeader(self, dataItem):
         if self._report.header is not None:
@@ -313,13 +326,9 @@ class ReportRenderer(object):
     def _printBegin(self, dataItem):
         if self._report.begin is not None:
             self._renderBandPageWide(self._report.begin, dataItem, False)
-            if self._report.begin.forceNewPageAfter:
-                self._newPage()
 
     def _printSummary(self, dataItem):
         if self._report.summary is not None:
-            if self._report.summary.forceNewPage:
-                self._newPage()
             self._renderBandPageWide(self._report.summary, dataItem, False)
 
     def _printColumnHeader(self, detailBand, dataItem):
@@ -346,8 +355,7 @@ class ReportRenderer(object):
             self.__y = self.__detailTop
             self.__x += self.__columnWidth + self._currentSection.columnSpace
         else:
-            self._printPageFooter(dataItem)
-            self._newPage()
+            self._newPage(dataItem)
             self._printPageHeader(dataItem)
             self.__col = 0
             self.__x = 0
