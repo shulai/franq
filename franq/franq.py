@@ -666,9 +666,13 @@ class TextElement(Element):
 
         Properties
         ----------
+        * expand: Increase effective height if necessary to make the value
+            fit. Default True.
+        * noRepeat: Don't print again if it's the same value as the last
+            record. Default False.
+        * richText: Render the value as HTML code. Default False.
         * textOptions: QTextOption, mainly used for text alignment.
-        * noRepeat: Default False
-        * expand: Default True
+
     """
     textOptions = QTextOption()
     noRepeat = False
