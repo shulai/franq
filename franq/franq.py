@@ -694,18 +694,17 @@ class TextElement(Element):
             return self._expandHeight(painter, text)
         else:
             return self.height
-        # TODO: Make renderHeight calculate required height
-        # Required:
-        # Implement self._text() in descendants, call _text() in _render and
-        # rename it to render, delete render() in descendants
-        # QFontMetrics requires font, will need font from band/report
-        # either as a parameter or receiving painter as a parameter
-        #return self.height
 
-    def _render(self, painter, rect, text):
+    def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
+        text = self._text(data_item)
+
         if self.noRepeat and self._lastText == text:
             return
         self._lastText = text
+
         self.renderSetup(painter)
         if self.font:
             parent_font = painter.font()
@@ -717,8 +716,8 @@ class TextElement(Element):
         elementRect = QRectF(
             QPointF(self.left, self.top) + rect.topLeft(),
             QSizeF(self.width, effectiveHeight))
-
         self.renderBorderAndBackground(painter, elementRect)
+
         if self.richText:
             doc = QTextDocument()
             doc.documentLayout().setPaintDevice(painter.device())
@@ -750,12 +749,6 @@ class Label(TextElement):
 
     def _text(self, data_item):
         return self.text
-
-    def render(self, painter, rect, data_item):
-        if self.on_before_print is not None:
-            self.on_before_print(self, data_item)
-
-        self._render(painter, rect, self.text)
 
 
 class Field(TextElement):
@@ -805,22 +798,6 @@ class Field(TextElement):
                 v = ''
             return v
 
-    def render(self, painter, rect, data_item):
-        if self.on_before_print is not None:
-            self.on_before_print(self, data_item)
-
-        if self.formatter:
-            self._render(painter, rect,
-                self.formatter(self._get_value(data_item)))
-        elif self.formatStr:
-            self._render(painter, rect,
-                self.formatStr.format(self._get_value(data_item)))
-        else:
-            v = self._get_value(data_item)
-            if v is None:
-                v = ''
-            self._render(painter, rect, v)
-
 
 class Function(TextElement):
     """
@@ -837,13 +814,6 @@ class Function(TextElement):
     def _text(self, data_item):
         # TODO: avoiding calling func twice
         return self.func(data_item)
-
-    def render(self, painter, rect, data_item):
-        if self.on_before_print is not None:
-            self.on_before_print(self, data_item)
-
-        value = self.func(data_item)
-        self._render(painter, rect, value)
 
 
 class Line(Element):
