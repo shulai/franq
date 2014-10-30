@@ -19,6 +19,8 @@
 import sip
 sip.setapi("QString", 2)
 
+import functools
+
 from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
 from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
     QTextDocument, QFontMetricsF)
@@ -799,6 +801,18 @@ class Field(TextElement):
             return v
 
 
+# note that this decorator ignores **kwargs
+def memoize(obj):
+    cache = obj.cache = {}
+
+    @functools.wraps(obj)
+    def memoizer(*args, **kwargs):
+        if args not in cache:
+            cache[args] = obj(*args, **kwargs)
+        return cache[args]
+    return memoizer
+
+
 class Function(TextElement):
     """
         Dynamic Function based text element.
@@ -811,8 +825,10 @@ class Function(TextElement):
             data item as parameter, returns unicode value to render.
     """
 
+    # memoize decorator to avoid repeated calling to func on renderHeight()
+    # and render() methods
+    @memoize
     def _text(self, data_item):
-        # TODO: avoiding calling func twice
         return self.func(data_item)
 
 
