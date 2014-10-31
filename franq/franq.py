@@ -691,8 +691,8 @@ class TextElement(Element):
         return max(self.height, bound_rect.height())
 
     def renderHeight(self, painter, data_item):
-        text = self._text(data_item)
         if self.expand and not self.richText:
+            text = self._text(data_item)
             return self._expandHeight(painter, text)
         else:
             return self.height
