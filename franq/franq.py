@@ -801,18 +801,6 @@ class Field(TextElement):
             return v
 
 
-# note that this decorator ignores **kwargs
-def memoize(obj):
-    cache = obj.cache = {}
-
-    @functools.wraps(obj)
-    def memoizer(*args, **kwargs):
-        if args not in cache:
-            cache[args] = obj(*args, **kwargs)
-        return cache[args]
-    return memoizer
-
-
 class Function(TextElement):
     """
         Dynamic Function based text element.
@@ -825,11 +813,17 @@ class Function(TextElement):
             data item as parameter, returns unicode value to render.
     """
 
-    # memoize decorator to avoid repeated calling to func on renderHeight()
-    # and render() methods
-    @memoize
+    def __init__(self, **kw):
+        super(TextElement, self).__init__(**kw)
+        self._last_id = None
+        self._last_value = None
+
     def _text(self, data_item):
-        return self.func(data_item)
+        # Avoid calling func twice with the same argument
+        if id(data_item) != self._last_id:
+            self._last_id = id(data_item)
+            self._last_value = self.func(data_item)
+        return self._last_value
 
 
 class Line(Element):
