@@ -358,7 +358,6 @@ class ReportRenderer(object):
             self.__x += self.__columnWidth + self._currentSection.columnSpace
         else:
             self._newPage(dataItem)
-            self._printPageHeader(dataItem)
             self.__col = 0
             self.__x = 0
         self._printColumnHeader(self._currentDetailBand, dataItem)
