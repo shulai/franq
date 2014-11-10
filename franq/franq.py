@@ -389,6 +389,8 @@ class ReportRenderer(object):
         try:
             groupingLevel = 0
             dataItem = ds.getDataItem()
+            if not dataItem:
+                return
             self._printDetailBegin(detailBand, dataItem)
             self._printColumnHeader(detailBand, dataItem)
             # Print first round of group headers
