@@ -379,7 +379,7 @@ class ReportRenderer(object):
         self.__detailBottom = self.__pageHeight - (self.__footerHeight +
                 detailFooterHeight)
 
-        if dataSet:
+        if dataSet is not None:
             ds = DataSource(dataSet)
         elif detailBand.dataSet is not None:
             ds = self._dataSources[detailBand.dataSet]
