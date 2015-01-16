@@ -821,10 +821,19 @@ class Function(TextElement):
 
     def _text(self, data_item):
         # Avoid calling func twice with the same argument
+        # _last_id is reset in render() as the main reason to do caching
+        # is to reuse the value for renderHeight() and render() calls.
+        # Also, when the Function object is created as a report class member
+        # the _last_id is preserved between report renderings leading
+        # to incorrect behaviour if caching is allowed
         if id(data_item) != self._last_id:
             self._last_id = id(data_item)
             self._last_value = self.func(data_item)
         return self._last_value
+
+    def render(self, painter, rect, data_item):
+        super().render(painter, rect, data_item)
+        self._last_id = None
 
 
 class Line(Element):
