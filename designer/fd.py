@@ -12,8 +12,9 @@ sip.setapi('QTime', 2)
 sip.setapi('QVariant', 2)
 
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, pyqtSlot
-from model import ReportModel
+from PyQt4.QtCore import Qt, pyqtSlot, QPoint
+from model import (ReportModel, ElementModel, LabelModel, FieldModel,
+    FunctionModel)
 from view import ReportView
 from properties import property_tables
 
@@ -31,10 +32,22 @@ class MainWindow(QtGui.QMainWindow):
         #    QtGui.QBrush(QtGui.QColor('brown'), Qt.Dense4Pattern))
         self.set_scale()
         self.ui.graphicsView.setScene(self.scene)
-        self.scene.selectionChanged.connect(self.on_scene_selectionChanged)
+
+        def mousePressEvent(event):
+            QtGui.QGraphicsView.mousePressEvent(self.ui.graphicsView, event)
+            if event.button() == Qt.LeftButton:
+                self.on_view_click()
+            elif event.button() == Qt.RightButton:
+                pass
+
+        self.ui.graphicsView.mousePressEvent = mousePressEvent
+        self.ui.graphicsView.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ui.graphicsView.customContextMenuRequested.connect(self.showContextMenu)
         self.model = None
         self.view = None
         self.selected = None
+        self.mode = 'select'
+        self._context_menu = QtGui.QMenu()
 
     def new_report(self):
         self.model = ReportModel()
@@ -60,18 +73,16 @@ class MainWindow(QtGui.QMainWindow):
             self.setWindowTitle('Franq Designer [{0}]'
                 .format(os.path.basename(self.filename)))
         except IOError as e:
-            QtGui.QMessageBox('Open file', str(e))
+            QtGui.QMessageBox.critical(self, 'Open file', str(e))
 
     def save_report(self, filename):
-        print 'save', self.model.save()
         with open(filename, 'wt') as report_file:
-            json.dump(self.model.save(), report_file)
+            json.dump(self.model.save(), report_file, indent=4)
         self.filename = filename
         self.setWindowTitle('Franq Designer [{0}]'
             .format(os.path.basename(self.filename)))
 
     def set_scale(self):
-        print "set_scale", self.scale
         self.ui.graphicsView.resetTransform()
         self.ui.graphicsView.scale(
             self.physicalDpiX() / 300.0 * self.scale / 100.0,
@@ -119,11 +130,204 @@ class MainWindow(QtGui.QMainWindow):
             self.scale /= 2
             self.set_scale()
 
-    def on_scene_selectionChanged(self):
-        element = self.scene.selectedItems()[0].model
+    @pyqtSlot()
+    def on_action_Select_triggered(self):
+        self.mode = 'select'
+        self.scene.clearSelection()
+
+    @pyqtSlot()
+    def on_action_Add_Label_triggered(self):
+        self.mode = 'add_label'
+        self.scene.clearSelection()
+
+    @pyqtSlot()
+    def on_action_Add_Field_triggered(self):
+        self.mode = 'add_field'
+        self.scene.clearSelection()
+
+    @pyqtSlot()
+    def on_action_Add_Function_triggered(self):
+        self.mode = 'add_function'
+        self.scene.clearSelection()
+
+    def on_view_click(self):
+        print('on_view_click')
+        {
+            'select': self.select_item,
+            'add_label': self.add_label,
+            'add_field': self.add_field,
+            'add_function': self.add_function
+            }[self.mode]()
+
+    @pyqtSlot()
+    def on_actionAlign_Top_triggered(self):
+        try:
+            head, *tail = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        except ValueError:
+            return  # No items selected
+        for item in tail:
+            item.top = head.top
+
+    @pyqtSlot()
+    def on_actionAlign_Middle_triggered(self):
+        try:
+            head, *tail = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        except ValueError:
+            return  # No items selected
+        for item in tail:
+            item.top = head.top + head.height / 2 - item.height / 2
+
+    @pyqtSlot()
+    def on_actionAlign_Bottom_triggered(self):
+        try:
+            head, *tail = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        except ValueError:
+            return  # No items selected
+        for item in tail:
+            item.top = head.top + head.height - item.height
+
+    @pyqtSlot()
+    def on_actionAlign_Left_triggered(self):
+        try:
+            head, *tail = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        except ValueError:
+            return  # No items selected
+        for item in tail:
+            item.left = head.left
+
+    @pyqtSlot()
+    def on_actionAlign_Center_triggered(self):
+        try:
+            head, *tail = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        except ValueError:
+            return  # No items selected
+        for item in tail:
+            item.left = head.left + head.width / 2 - item.width / 2
+
+    @pyqtSlot()
+    def on_actionAlign_Right_triggered(self):
+        try:
+            head, *tail = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        except ValueError:
+            return  # No items selected
+        for item in tail:
+            item.left = head.left + head.width - item.width
+
+    @pyqtSlot()
+    def on_actionDistribute_Horizontally_triggered(self):
+        items = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        if len(items) < 2:
+            return
+        items.sort(key=lambda item: item.left)
+        group_width = items[-1].left + items[-1].width - items[0].left
+        items_widths = sum([item.width for item in items])
+        space_available = group_width - items_widths
+        if space_available < 0:
+            return  # Unable to distribute
+        space_between = space_available / (len(items) - 1)
+        item_left = items[0].left
+        for item in items[:-1]:
+            item.left = item_left
+            item_left += item.width + space_between
+
+    @pyqtSlot()
+    def on_actionDistribute_Vertically_triggered(self):
+        items = [item.model for item in self.scene.selectedItems()
+                if isinstance(item.model, ElementModel)]
+        if len(items) < 2:
+            return
+        items.sort(key=lambda item: item.top)
+        group_height = items[-1].top + items[-1].height - items[0].top
+        items_heights = sum([item.height for item in items])
+        space_available = group_height - items_heights
+        if space_available < 0:
+            return  # Unable to distribute
+        space_between = space_available / (len(items) - 1)
+        item_top = items[0].top
+        for item in items[:-1]:
+            item.top = item_top
+            item_top += item.height + space_between
+
+    def select_element(self, element):
         self.property_table = property_tables[type(element)]
         self.property_table.setModel(element)
         self.ui.properties.setModel(self.property_table)
+        for row in range(0, self.property_table.rowCount()):
+            delegate = self.property_table.delegate(row)
+            #
+            self.ui.properties.setItemDelegateForRow(row, delegate)
+
+    def showContextMenu(self, pos):
+        self._context_menu.clear()
+        print(pos.x(), pos.y())
+        transform = self.ui.graphicsView.transform()
+        scene_pos = QPoint(pos.x() / transform.m11(), pos.y() / transform.m22())
+        print('m11', transform.m11())
+        item_view = self.scene.itemAt(scene_pos)
+        print(item_view)
+        if not item_view:
+            return
+        element = item_view.model
+        if isinstance(element, ReportModel):
+            print('reportmodel')
+            if element.begin:
+                self._context_menu.addAction('Remove begin band')
+            else:
+                self._context_menu.addAction('Add begin band')
+            if element.summary:
+                self._context_menu.addAction('Remove summary band')
+            else:
+                self._context_menu.addAction('Add summary band')
+
+        self._context_menu.popup(self.ui.graphicsView.mapToGlobal(pos))
+
+    def select_item(self):
+        element = self.scene.selectedItems()[0].model
+        self.select_element(element)
+
+    def add_element(self, ElementClass):
+        print('add_element')
+        view_item = self.scene.selectedItems()[0]
+        if not view_item:
+            return
+        elif isinstance(view_item.model, ReportModel):
+            print(view_item.model, 'return')
+            return
+        if isinstance(view_item.model, ElementModel):
+            band = view_item.parentItem().model
+        else:
+            band = view_item.model
+
+        print(band, band.description)
+        el = ElementClass(band)
+        band.elements.append(el)
+
+        cursor_pos = self.ui.graphicsView.mapFromGlobal(QtGui.QCursor.pos())
+        cursor_scene_pos = self.ui.graphicsView.mapToScene(cursor_pos)
+        el_pos = view_item.mapFromScene(cursor_scene_pos)
+        el.left = el_pos.x()
+        el.top = el_pos.y()
+
+        view_item.add_child(el, -1)
+
+        self.select_element(el)
+        self.mode = 'select'
+
+    def add_label(self):
+        self.add_element(LabelModel)
+
+    def add_field(self):
+        self.add_element(FieldModel)
+
+    def add_function(self):
+        self.add_element(FunctionModel)
 
 
 class DesignerApp(QtGui.QApplication):
@@ -131,7 +335,7 @@ class DesignerApp(QtGui.QApplication):
     def __init__(self, argv):
         super(QtGui.QApplication, self).__init__(argv)
         try:
-            filename = (arg for arg in argv[1:] if arg[0] != '-').next()
+            filename = (arg for arg in argv[1:] if arg[0] != '-').__next__()
         except StopIteration:
             filename = None
         self.main_window = MainWindow()
