@@ -1,4 +1,5 @@
 
+import sip
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 from franq import inch, mm
@@ -38,21 +39,33 @@ class ElementView(QtGui.QGraphicsRectItem):
     def __init__(self, model):
         super(ElementView, self).__init__()
         self.model = model
+        self.model.add_callback(self.observe_model)
         self.setFlags(
             QtGui.QGraphicsItem.ItemIsSelectable
-            | QtGui.QGraphicsItem.ItemIsMovable)
+            | QtGui.QGraphicsItem.ItemIsMovable
+            | QtGui.QGraphicsItem.ItemSendsGeometryChanges)
         self.setRect(0, 0, self.model.width, self.model.height)
 
-    #def itemChange(self, change, value):
-        #return super(ElementView, self).itemChange(change, value)
-        #if change == QtGui.QGraphicsRectItem.ItemPositionChange:
-            #new_pos = value.toPointF()
-            #rect = self.parent().rect()
-            #if (not rect.contains(new_pos)):
-                #new_pos.setX(min(rect.right(), max(new_pos.x(), rect.left())))
-                #new_pos.setY(min(rect.bottom(), max(new_pos.y(), rect.top())))
-                ##value = new_pos #return new_pos
-        #return value  # super(ElementView, self).itemChange(change, value)
+    def itemChange(self, change, value):
+        if change == QtGui.QGraphicsRectItem.ItemPositionHasChanged:
+            # TODO: Restrict to parent
+            self.model.left = value.x()
+            self.model.top = value.y()
+        # http://python.6.x6.nabble.com/
+        # setapi-and-itemChange-setParentItem-related-bug-td4984797.html
+        if isinstance(value, QtGui.QGraphicsItem):
+            value = sip.cast(value, QtGui.QGraphicsItem)
+        return value
+
+    def observe_model(self, sender, event_type, _, attrs):
+        if event_type == 'update':
+            attrs = set(attrs)
+            if attrs & {'top', 'left'}:
+                self.setPos(self.model.left, self.model.top)
+            elif attrs & {'height', 'width'}:
+                self.setRect(0, 0, self.model.width, self.model.height)
+            else:
+                self.update()
 
 
 class TextView(ElementView):
@@ -102,22 +115,27 @@ class BandView(QtGui.QGraphicsRectItem):
         self.setBrush(WHITE)
 
         self.model = model
+        self.model.add_callback(self.observe_model)
+        self.model.elements.add_callback(self.observe_model_elements)
         self.height = self.model.height
 
         self.children = []
         for element in self.model.elements:
-            class_ = {
-                LabelModel: LabelView,
-                FieldModel: FieldView,
-                FunctionModel: FunctionView,
-                LineModel: None,
-                BoxModel: None,
-                ImageModel: None,
-                }[type(element)]
-            child = class_(element)
-            child.setParentItem(self)
-            child.setPos(element.left, element.top)
-            self.children.append(child)
+            self.add_child(element, -1)
+
+    def add_child(self, element, pos):
+        class_ = {
+            LabelModel: LabelView,
+            FieldModel: FieldView,
+            FunctionModel: FunctionView,
+            LineModel: None,
+            BoxModel: None,
+            ImageModel: None,
+            }[type(element)]
+        child = class_(element)
+        child.setParentItem(self)
+        child.setPos(element.left, element.top)
+        self.children.insert(pos, child)
 
     def setWidth(self, width):
         self.width = width
@@ -131,6 +149,22 @@ class BandView(QtGui.QGraphicsRectItem):
         painter.setFont(DESC_FONT)
         painter.setPen(GRAY)
         painter.drawText(0, self.height - 10, self.model.description)
+
+    def observe_model(self, sender, event_type, _, attrs):
+        if event_type == 'update':
+            if 'height' in attrs:
+                self.height = self.model.height
+                self.setRect(0, 0, self.boundingRect().width(),
+                    self.height)
+                self.parentItem().child_size_updated(self)
+
+    def observe_model_elements(self, sender, event_type, _, event_data):
+        if event_type == 'append':
+            self.add_child(sender[-1], -1)
+        elif event_type == 'insert':
+            self.add_child(sender[-1], event_data)
+        elif event_type == 'remove':
+            self.children.pop(event_data)
 
 
 class DetailBandView(BandView):
@@ -184,10 +218,8 @@ class ReportView(QtGui.QGraphicsRectItem):
         self.margin_pen = QtGui.QPen(Qt.DashLine)
 
         self.model = model
-        self.update_size()
-
         self.children = []
-        self.child_top = self.model.margins[3]
+        self.update_size()
 
         if self.model.header:
             self.add_child(BandView(self.model.header))
@@ -216,18 +248,22 @@ class ReportView(QtGui.QGraphicsRectItem):
         self.children_left = self.model.margins[3]
         self.children_width = (self.width - self.model.margins[1]
             - self.model.margins[3])
-        # TODO: Update children position
+        self.child_top = self.model.margins[0]
+        for child in self.children:
+            child.setPos(self.children_left, self.child_top)
+            self.child_top += child.height
 
     #def model_size_updated(self):
         #self.update_size()
         #for child in self.children:
             #child.setWidth(self.children_width)
 
-    #def child_size_updated(self, child):
-        #i = self.children.index(child)
-        #child_top = self.children[i].top + self.children[i].height
-        #for child in self.children[i + 1:]:
-            #child.setPos(self.children_left, child_top)
+    def child_size_updated(self, child):
+        self.child_top = child.y() + child.boundingRect().height()
+        i = self.children.index(child)
+        for child in self.children[i + 1:]:
+            child.setPos(self.children_left, self.child_top)
+            self.child_top += child.height
 
     def add_child(self, child):
         child.setParentItem(self)
