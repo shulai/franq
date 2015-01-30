@@ -153,8 +153,7 @@ class PropertyTable(QAbstractTableModel):
                     return None
                 prop = self._properties[index.row()]
                 v = prop.propertyTransform(
-                    getattr(self._model, prop.propertyName), role)
-
+                    self._model.getPropertyValue(prop.propertyName), role)
                 if v is None:
                     v = ''
                 return v
@@ -173,8 +172,7 @@ class PropertyTable(QAbstractTableModel):
         if role == Qt.EditRole and index.column() == 1:
             prop = self._properties[index.row()]
             value = prop.propertyInverseTransform(value)
-            setattr(self._model,
-                prop.propertyName, value)
+            self._model.setPropertyValue(prop.propertyName, value)
         return True
 
     def setModel(self, model):

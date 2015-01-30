@@ -11,11 +11,33 @@ def load_font(f):
     return QFont(f['family'], f['size'], f['weight'], f['italic'])
 
 
-class ElementModel(ObservableObject):
+class AbstractModel(ObservableObject):
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+
+    def getPropertyValue(self, name):
+        v = getattr(self, name)
+        if v is None and self.parent:
+            try:
+                print('parent value')
+                v = self.parent.getPropertyValue(name)
+            except AttributeError:
+                pass
+        return v
+
+    def setPropertyValue(self, name, value):
+        setattr(self, name, value)
+
+    def resetPropertyValue(self, name):
+        setattr(self, name, None)
+
+
+class ElementModel(AbstractModel):
 
     def __init__(self, parent):
-        super(ElementModel, self).__init__()
-        self.parent = parent
+        super().__init__(parent)
         self.font = None
 
     def load(self, json):
@@ -151,14 +173,13 @@ element_classes = {
     }
 
 
-class BandModel(ObservableObject):
+class BandModel(AbstractModel):
 
     _notifiables_ = ('description', 'height', 'pen', 'background', 'font')
 
     def __init__(self, description, parent):
-        super(BandModel, self).__init__()
+        super().__init__(parent)
         self.description = description
-        self.parent = parent
         self.elements = ObservableListProxy()
         self.height = 20 * mm
         self.expand = False
@@ -199,7 +220,7 @@ class BandModel(ObservableObject):
 class DetailBandModel(BandModel):
 
     def __init__(self, parent):
-        super(DetailBandModel, self).__init__('Detail Band', parent)
+        super().__init__('Detail Band', parent)
         self.dataSet = None
 
     def load(self, json):
@@ -208,11 +229,10 @@ class DetailBandModel(BandModel):
             self.dataSet = json['dataSet']
 
 
-class SectionModel(ObservableObject):
+class SectionModel(AbstractModel):
 
     def __init__(self, parent):
-        super(SectionModel, self).__init__()
-        self.parent = parent
+        super().__init__(parent)
         self.columns = 1
         self.columnSpace = 0.0
         self.detailBands = ObservableListProxy([DetailBandModel(self)])
@@ -237,7 +257,7 @@ class SectionModel(ObservableObject):
         return json
 
 
-class ReportModel(ObservableObject):
+class ReportModel(AbstractModel):
 
     def __init__(self):
         super(ReportModel, self).__init__()
