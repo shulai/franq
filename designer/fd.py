@@ -359,7 +359,7 @@ class MainWindow(QtGui.QMainWindow):
         setattr(self.model, band_attr, None)
 
     def add_begin_band(self):
-        model = BandModel('Begin Band', self)
+        model = BandModel('Begin Band', self.model)
         self.model.begin = model
         view = BandView(model)
         self.view.add_child(view, 0)
@@ -368,7 +368,7 @@ class MainWindow(QtGui.QMainWindow):
         self.remove_band('begin')
 
     def add_header_band(self):
-        model = BandModel('Header Band', self)
+        model = BandModel('Header Band', self.model)
         self.model.header = model
         view = BandView(model)
         position = 1 if self.model.begin else 0
@@ -378,7 +378,7 @@ class MainWindow(QtGui.QMainWindow):
         self.remove_band('header')
 
     def add_footer_band(self):
-        model = BandModel('Footer Band', self)
+        model = BandModel('Footer Band', self.model)
         self.model.footer = model
         view = BandView(model)
         position = len(self.view.children) - 1 if self.model.summary else None
@@ -388,7 +388,7 @@ class MainWindow(QtGui.QMainWindow):
         self.remove_band('footer')
 
     def add_summary_band(self):
-        model = BandModel('Summary Band', self)
+        model = BandModel('Summary Band', self.model)
         self.model.summary = model
         view = BandView(model)
         self.view.add_child(view, None)
