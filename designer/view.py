@@ -248,10 +248,10 @@ class ReportView(QtGui.QGraphicsRectItem):
         self.children_left = self.model.margins[3]
         self.children_width = (self.width - self.model.margins[1]
             - self.model.margins[3])
-        self.child_top = self.model.margins[0]
+        child_top = self.model.margins[0]
         for child in self.children:
-            child.setPos(self.children_left, self.child_top)
-            self.child_top += child.height
+            child.setPos(self.children_left, child_top)
+            child_top += child.height
 
     #def model_size_updated(self):
         #self.update_size()
@@ -259,18 +259,42 @@ class ReportView(QtGui.QGraphicsRectItem):
             #child.setWidth(self.children_width)
 
     def child_size_updated(self, child):
-        self.child_top = child.y() + child.boundingRect().height()
+        child_top = child.mapRectToParent(child.boundingRect()).bottom()
         i = self.children.index(child)
         for child in self.children[i + 1:]:
-            child.setPos(self.children_left, self.child_top)
-            self.child_top += child.height
+            child.setPos(self.children_left, child_top)
+            child_top += child.height
 
-    def add_child(self, child):
+    def add_child(self, child, position=None):
         child.setParentItem(self)
-        child.setPos(self.children_left, self.child_top)
-        child.setRect(0, 0, self.children_width, child.height)
-        self.children.append(child)
-        self.child_top += child.height
+        if position is None:
+            if self.children:
+                child_top = self.children[-1].mapRectToParent(
+                    self.children[-1].boundingRect()).bottom()
+            else:
+                child_top = self.model.margins[0]
+            child.setPos(self.children_left, child_top)
+            child.setRect(0, 0, self.children_width, child.height)
+            self.children.append(child)
+        else:
+            if position == 0:
+                child_top = self.model.margins[0]
+            else:
+                child_top = self.children[position - 1].mapRectToParent(
+                self.children[position - 1].boundingRect()).bottom()
+            child.setPos(self.children_left, child_top)
+            child.setRect(0, 0, self.children_width, child.height)
+            self.children.insert(position, child)
+            for other_child in self.children[position + 1:]:
+                other_child.moveBy(0, child.height)
+
+    def remove_child(self, child):
+        position = self.children.index(child)
+        child.parent = None
+        del self.children[position]
+        child.setParentItem(None)
+        for other_child in self.children[position:]:
+            other_child.moveBy(0, -child.height)
 
     def paint(self, painter, option, widget):
         super(ReportView, self).paint(painter, option, widget)

@@ -13,9 +13,9 @@ sip.setapi('QVariant', 2)
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, pyqtSlot, QPoint
-from model import (ReportModel, ElementModel, LabelModel, FieldModel,
+from model import (ReportModel, BandModel, ElementModel, LabelModel, FieldModel,
     FunctionModel)
-from view import ReportView
+from view import ReportView, BandView
 from properties import property_tables
 
 
@@ -278,13 +278,32 @@ class MainWindow(QtGui.QMainWindow):
         if isinstance(element, ReportModel):
             print('reportmodel')
             if element.begin:
-                self._context_menu.addAction('Remove begin band')
+                action = self._context_menu.addAction('Remove begin band')
+                action.triggered.connect(self.remove_begin_band)
             else:
-                self._context_menu.addAction('Add begin band')
+                action = self._context_menu.addAction('Add begin band')
+                action.triggered.connect(self.add_begin_band)
+
+            if element.header:
+                action = self._context_menu.addAction('Remove header band')
+                action.triggered.connect(self.remove_header_band)
+            else:
+                action = self._context_menu.addAction('Add header band')
+                action.triggered.connect(self.add_header_band)
+
+            if element.footer:
+                action = self._context_menu.addAction('Remove footer band')
+                action.triggered.connect(self.remove_footer_band)
+            else:
+                action = self._context_menu.addAction('Add footer band')
+                action.triggered.connect(self.add_footer_band)
+
             if element.summary:
-                self._context_menu.addAction('Remove summary band')
+                action = self._context_menu.addAction('Remove summary band')
+                action.triggered.connect(self.remove_summary_band)
             else:
-                self._context_menu.addAction('Add summary band')
+                action = self._context_menu.addAction('Add summary band')
+                action.triggered.connect(self.add_summary_band)
 
         self._context_menu.popup(self.ui.graphicsView.mapToGlobal(pos))
 
@@ -328,6 +347,54 @@ class MainWindow(QtGui.QMainWindow):
 
     def add_function(self):
         self.add_element(FunctionModel)
+
+    def remove_band(self, band_attr):
+        model = getattr(self.model, band_attr)
+        view = next((child
+            for child in self.view.children
+            if child.model == model))
+        self.view.remove_child(view)
+        self.scene.removeItem(view)
+        model.parent = None
+        setattr(self.model, band_attr, None)
+
+    def add_begin_band(self):
+        model = BandModel('Begin Band', self)
+        self.model.begin = model
+        view = BandView(model)
+        self.view.add_child(view, 0)
+
+    def remove_begin_band(self):
+        self.remove_band('begin')
+
+    def add_header_band(self):
+        model = BandModel('Header Band', self)
+        self.model.header = model
+        view = BandView(model)
+        position = 1 if self.model.begin else 0
+        self.view.add_child(view, position)
+
+    def remove_header_band(self):
+        self.remove_band('header')
+
+    def add_footer_band(self):
+        model = BandModel('Footer Band', self)
+        self.model.footer = model
+        view = BandView(model)
+        position = len(self.view.children) - 1 if self.model.summary else None
+        self.view.add_child(view, position)
+
+    def remove_footer_band(self):
+        self.remove_band('footer')
+
+    def add_summary_band(self):
+        model = BandModel('Summary Band', self)
+        self.model.summary = model
+        view = BandView(model)
+        self.view.add_child(view, None)
+
+    def remove_summary_band(self):
+        self.remove_band('summary')
 
 
 class DesignerApp(QtGui.QApplication):
