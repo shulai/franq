@@ -152,8 +152,13 @@ class PropertyTable(QAbstractTableModel):
                 if self._model is None:
                     return None
                 prop = self._properties[index.row()]
-                v = prop.propertyTransform(
-                    self._model.getPropertyValue(prop.propertyName), role)
+                # Returns effective inherited font if font not defined
+                if prop.propertyName == 'font':
+                    v = prop.propertyTransform(self._model.active_font(), role)
+                else:
+                    v = prop.propertyTransform(
+                        getattr(self._model, prop.propertyName), role)
+
                 if v is None:
                     v = ''
                 return v
@@ -172,7 +177,8 @@ class PropertyTable(QAbstractTableModel):
         if role == Qt.EditRole and index.column() == 1:
             prop = self._properties[index.row()]
             value = prop.propertyInverseTransform(value)
-            self._model.setPropertyValue(prop.propertyName, value)
+            setattr(self._model,
+                prop.propertyName, value)
         return True
 
     def setModel(self, model):
