@@ -183,6 +183,7 @@ class BandModel(AbstractModel):
         self.elements = ObservableListProxy()
         self.height = 20 * mm
         self.expand = False
+        self.font = None
 
     def active_font(self):
         return self.font if self.font else self.parent.active_font()
