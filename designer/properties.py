@@ -195,7 +195,7 @@ class PropertyTable(QAbstractTableModel):
             propertyNames = [p.propertyName for p in self._properties]
             index = self.createIndex(propertyNames.index(attrs[0]), 1)
             self.dataChanged.emit(index, index)
-        except KeyError:
+        except (KeyError, ValueError):
             pass
 
 
