@@ -247,7 +247,8 @@ class ReportModel(ObservableObject):
         self.title = u'Report'
         self.paperSize = franq.Report.paperSize
         self.paperOrientation = franq.Report.paperOrientation
-        self.font = QFont('Helvetica', 12 * franq.inch / 72)
+        self.font = QFont('Helvetica', 12)
+        self.font.setStyleHint(QFont.SansSerif, QFont.ForceOutline)
 
         self.margins = franq.Report.margins
         self.begin = None

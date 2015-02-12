@@ -127,7 +127,7 @@ class FontProperty(Property):
             return '{}{} {}pt{}'.format(
                 v.family(),
                 ' bold' if v.bold() else '',
-                v.pointSize() * 24 // 100,
+                v.pointSize(),
                 ' italic' if v.italic() else '') if v else "(Parent's)"
 
 

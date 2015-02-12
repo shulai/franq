@@ -72,8 +72,8 @@ class TextView(ElementView):
 
     def paint(self, painter, option, widget):
         super(TextView, self).paint(painter, option, widget)
-
-        font = self.model.active_font()
+        font = QtGui.QFont(self.model.active_font())
+        font.setPointSize(font.pointSize() * inch // 72)
         painter.setFont(font)
         painter.drawText(self.rect(),
             self.text_placeholder())
