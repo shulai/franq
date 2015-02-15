@@ -7,8 +7,37 @@ import franq
 mm = franq.mm
 
 
-def load_font(f):
-    return QFont(f['family'], f['size'], f['weight'], f['italic'])
+#def load_font(f):
+#    return QFont(f['family'], f['size'], f['weight'], f['italic'])
+
+class CallGenerator:
+
+    def __init__(self, name, *params):
+        self._name = name
+        self._params = list(params)
+
+    def param(self, name, value):
+        self._params.append((name, value))
+
+    def param_font(self, font):
+        self.param(
+            'font', "QFont({}, {}, {}, {})\n".format(
+                repr(font.family()),
+                font.pointSize(),
+                font.weight(),
+                repr(self.font.italic())
+                )
+            )
+
+    def param_list(self, name, l):
+        self.param(name, "[" + ", ".join((x for x in l)) + "]")
+
+    def generate(self):
+        return (
+            self._name
+                + "(" + ", ".join(
+                    [pair[0] + "=" + pair[1]
+                    for pair in self._params]) + ")")
 
 
 class ElementModel(ObservableObject):
@@ -26,8 +55,8 @@ class ElementModel(ObservableObject):
         # TODO: Load values if available
         self.pen = None
         self.background = None
-        if 'font' in json:
-            self.font = load_font(json['font'])
+        if json.get('font'):
+            self.font = QFont(*json['font'])
 
     def save(self):
         json = {
@@ -58,6 +87,17 @@ class TextModel(ElementModel):
         json['font'] = self.font
         return json
 
+    def _generator(self, name, *params):
+        gen = CallGenerator(name,
+            ('top', str(self.top)),
+            ('left', str(self.left)),
+            ('width', str(self.width)),
+            ('height', str(self.height)),
+            *params
+            )
+        if self.font:
+            gen.param_font(self.font)
+        return gen
 
 class LabelModel(TextModel):
 
@@ -74,6 +114,13 @@ class LabelModel(TextModel):
         json['type'] = 'label'
         json['text'] = self.text
         return json
+
+    def generate(self):
+        gen = self._generator('Label')
+        if self.font:
+            gen.param_font(self.font)
+        gen.param('text', repr(self.text))
+        return gen.generate()
 
 
 class FieldModel(TextModel):
@@ -95,6 +142,14 @@ class FieldModel(TextModel):
         json['format'] = self.format
         return json
 
+    def generate(self):
+        gen = self._generator('Field')
+        if self.font:
+            gen.param_font(self.font)
+        gen.param('attrName', repr(self.attrName))
+        gen.param('formatStr', repr(self.format))
+        return gen.generate()
+
 
 class FunctionModel(TextModel):
 
@@ -111,6 +166,13 @@ class FunctionModel(TextModel):
         json['type'] = 'function'
         json['func'] = self.func
         return json
+
+    def generate(self):
+        gen = self._generator('Function')
+        if self.font:
+            gen.param_font(self.font)
+        gen.param('func', repr(self.func))
+        return gen.generate()
 
 
 class LineModel(ElementModel):
@@ -180,7 +242,8 @@ class BandModel(ObservableObject):
         # TODO: Load values if available
         self.pen = None
         self.background = None
-        self.font = None
+        if json.get('font'):
+            self.font = QFont(*json['font'])
 
         if 'elements' in json and json['elements']:
             self.elements = ObservableListProxy(
@@ -196,6 +259,16 @@ class BandModel(ObservableObject):
         if hasattr(self, 'elements') and self.elements:
             json['elements'] = [e.save() for e in self.elements]
         return json
+
+    def generate(self):
+        gen = CallGenerator("Band",
+            ("height", str(self.height)),
+            ("expand", repr(self.expand)))
+
+        if self.font:
+            gen.param_font(self.font)
+        gen.param_list("elements", [el.generate() for el in self.elements])
+        return gen.generate()
 
 
 class DetailBandModel(BandModel):
@@ -245,7 +318,8 @@ class ReportModel(ObservableObject):
         super(ReportModel, self).__init__()
 
         # Ok?
-        self.title = u'Report'
+        self.name = 'NewReport'
+        self.title = 'Report'
         self.paperSize = franq.Report.paperSize
         self.paperOrientation = franq.Report.paperOrientation
         self.font = QFont('Helvetica', 12)
@@ -267,6 +341,7 @@ class ReportModel(ObservableObject):
         """
         Rebuild report structure from json.load() output
         """
+        self.name = json['name']
         self.paperSize = json['paperSize']
         if 'title' in json:
             self.title = json['title']
@@ -274,6 +349,7 @@ class ReportModel(ObservableObject):
             self.dataSet = json['dataSet']
         if 'margins' in json:
             self.margins = json['margins']
+        self.font = QFont(*json['font'])
 
         if 'begin' in json and json['begin']:
             self.begin = BandModel('Begin Band', self)
@@ -298,10 +374,17 @@ class ReportModel(ObservableObject):
         Convert report structure to serializable form
         """
         json = {
+            'name': self.name,
             'title': self.title,
             'dataSet': self.dataSet,
-            'paperSize': self.paperSize
+            'paperSize': self.paperSize,
+            'font': (
+                self.font.family(),
+                self.font.pointSize(),
+                self.font.weight(),
+                self.font.italic())
             }
+
         if self.begin:
             json['begin'] = self.begin.save()
         if self.header:
@@ -313,3 +396,40 @@ class ReportModel(ObservableObject):
         if self.summary:
             json['summary'] = self.summary.save()
         return json
+
+    def generate(self):
+        """
+            Generate Python code
+        """
+        s = (
+            "from PyQt4.QtGui import QPrinter, QFont\n"
+            "from franq import *\n"
+            "\n"
+            "class " + self.name + "(Report):\n"
+            "\n"
+            "    def setup(self):\n"
+            "        super(" + self.name + ", self).setup()\n"
+            "        self.title = " + repr(self.title) + "\n")
+        try:
+            paperSizeConst = ['A4', 'B5', 'Letter', 'Legal', 'Executive',
+                'A0', 'A1', 'A2', 'A3', 'A5'][self.paperSize]
+        except IndexError:
+            paperSizeConst = str(self.paperSize)
+        s += (
+            "        self.paperSize = QPrinter." + paperSizeConst + "\n")
+        paperOrientationConst = ('Portrait', 'LandScape')[self.paperOrientation]
+        s += (
+            "        self.paperOrientation = QPrinter." + paperOrientationConst
+                + "\n")
+        s += (
+            "        self.margins = " + repr(self.margins) + "\n")
+        s += (
+            "        self.font = QFont({}, {}, {}, {})\n".format(
+                repr(self.font.family()),
+                self.font.pointSize(),
+                self.font.weight(),
+                repr(self.font.italic())))
+
+        if self.begin:
+            s += "        self.begin = " + self.begin.generate() + "\n"
+        return s

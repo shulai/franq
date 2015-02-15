@@ -211,6 +211,7 @@ property_tables = {
         Property('dataSet'),
         FontProperty('font'),
         MarginsProperty('margins'),
+        Property('name'),
         PaperSizeProperty('paperSize'),
         Property('title')),
 
