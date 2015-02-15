@@ -266,12 +266,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def showContextMenu(self, pos):
         self._context_menu.clear()
-        print(pos.x(), pos.y())
-        transform = self.ui.graphicsView.transform()
-        scene_pos = QPoint(pos.x() / transform.m11(), pos.y() / transform.m22())
-        print('m11', transform.m11())
+        scene_pos = self.ui.graphicsView.mapToScene(pos)
         item_view = self.scene.itemAt(scene_pos)
-        print(item_view)
         if not item_view:
             return
         element = item_view.model
