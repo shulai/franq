@@ -12,10 +12,11 @@ sip.setapi('QTime', 2)
 sip.setapi('QVariant', 2)
 
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, pyqtSlot, QPoint
-from model import (ReportModel, BandModel, ElementModel, LabelModel, FieldModel,
+from PyQt4.QtCore import Qt, pyqtSlot
+from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
+    ElementModel, LabelModel, FieldModel,
     FunctionModel)
-from view import ReportView, BandView
+from view import ReportView, BandView, DetailBandView
 from properties import property_tables
 
 
@@ -45,6 +46,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.graphicsView.customContextMenuRequested.connect(self.showContextMenu)
         self.model = None
         self.view = None
+        self.view_map = {}
         self.selected = None
         self.mode = 'select'
         self._context_menu = QtGui.QMenu()
@@ -82,6 +84,10 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('Franq Designer [{0}]'
             .format(os.path.basename(self.filename)))
 
+    def generate_report(self, filename):
+        with open(filename, 'wt') as source_file:
+            source_file.write(self.model.generate())
+
     def set_scale(self):
         self.ui.graphicsView.resetTransform()
         self.ui.graphicsView.scale(
@@ -109,6 +115,19 @@ class MainWindow(QtGui.QMainWindow):
         else:
             filename = self.filename
         self.save_report(filename)
+
+    @pyqtSlot()
+    def on_action_Generate_triggered(self):
+        if not self.filename:
+            filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File',
+            filter='Franq reports (*.franq)')
+            if not filename:
+                return
+        else:
+            filename = self.filename
+        self.save_report(filename)
+        filename = filename.rsplit('.', 2)[0] + '_rpt.py'
+        self.generate_report(filename)
 
     @pyqtSlot()
     def on_action_Save_As_triggered(self):
@@ -256,6 +275,7 @@ class MainWindow(QtGui.QMainWindow):
             item_top += item.height + space_between
 
     def select_element(self, element):
+        self.selected = element
         self.property_table = property_tables[type(element)]
         self.property_table.setModel(element)
         self.ui.properties.setModel(self.property_table)
@@ -271,41 +291,57 @@ class MainWindow(QtGui.QMainWindow):
         if not item_view:
             return
         element = item_view.model
+        self.select_element(element)
         if isinstance(element, ReportModel):
-            print('reportmodel')
-            if element.begin:
-                action = self._context_menu.addAction('Remove begin band')
-                action.triggered.connect(self.remove_begin_band)
-            else:
+            if not element.begin:
                 action = self._context_menu.addAction('Add begin band')
                 action.triggered.connect(self.add_begin_band)
 
-            if element.header:
-                action = self._context_menu.addAction('Remove header band')
-                action.triggered.connect(self.remove_header_band)
-            else:
+            if not element.header:
                 action = self._context_menu.addAction('Add header band')
                 action.triggered.connect(self.add_header_band)
 
-            if element.footer:
-                action = self._context_menu.addAction('Remove footer band')
-                action.triggered.connect(self.remove_footer_band)
-            else:
+            if not element.footer:
                 action = self._context_menu.addAction('Add footer band')
                 action.triggered.connect(self.add_footer_band)
 
-            if element.summary:
-                action = self._context_menu.addAction('Remove summary band')
-                action.triggered.connect(self.remove_summary_band)
-            else:
+            if not element.summary:
                 action = self._context_menu.addAction('Add summary band')
                 action.triggered.connect(self.add_summary_band)
+        elif isinstance(element, BandModel):
+            action = self._context_menu.addAction(
+                QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
+            if element.parent == self.model:
+                slots = {
+                    self.model.begin: self.remove_begin_band,
+                    self.model.header: self.remove_header_band,
+                    self.model.footer: self.remove_footer_band,
+                    self.model.summary: self.remove_summary_band
+                    }
+                action.triggered.connect(slots[element])
+            elif isinstance(element.parent, SectionModel):
+                action.triggered.connect(self.remove_detail_band)
+            elif isinstance(element.parent, BandModel):
+                if element.parent.child == element:
+                    action.triggered.connect(self.remove_child_band)
+                elif isinstance(element.parent, DetailBandModel):
+                    if element.parent.columnHeader == element:
+                        action.triggered.connect(self.remove_column_header_band)
+                    elif element.parent.columnFooter == element:
+                        action.triggered.connect(self.remove_column_footer_band)
+                    # TODO: Group header/footer
+        elif isinstance(element, ElementModel):
+            action = self._context_menu.addAction('Remove Element')
+            action.triggered.connect(self.remove_element)
 
         self._context_menu.popup(self.ui.graphicsView.mapToGlobal(pos))
 
     def select_item(self):
-        element = self.scene.selectedItems()[0].model
-        self.select_element(element)
+        try:
+            element = self.scene.selectedItems()[0].model
+            self.select_element(element)
+        except IndexError:
+            pass
 
     def add_element(self, ElementClass):
         print('add_element')
@@ -320,7 +356,6 @@ class MainWindow(QtGui.QMainWindow):
         else:
             band = view_item.model
 
-        print(band, band.description)
         el = ElementClass(band)
         band.elements.append(el)
 
@@ -330,10 +365,19 @@ class MainWindow(QtGui.QMainWindow):
         el.left = el_pos.x()
         el.top = el_pos.y()
 
-        view_item.add_child(el, -1)
+        view = view_item.add_child(el, -1)
+        self.view_map[el] = view
 
         self.select_element(el)
         self.mode = 'select'
+
+    def remove_element(self):
+        model = self.selected
+        view = self.view_map[model]
+        view.parentItem().remove_child(view)
+        self.scene.removeItem(view)
+        model.parent.elements.remove(model)
+        model.parent = None
 
     def add_label(self):
         self.add_element(LabelModel)
@@ -345,11 +389,9 @@ class MainWindow(QtGui.QMainWindow):
         self.add_element(FunctionModel)
 
     def remove_band(self, band_attr):
-        model = getattr(self.model, band_attr)
-        view = next((child
-            for child in self.view.children
-            if child.model == model))
-        self.view.remove_child(view)
+        model = self.selected
+        view = self.view_map[model]
+        view.parentItem().remove_child(view)
         self.scene.removeItem(view)
         model.parent = None
         setattr(self.model, band_attr, None)
@@ -359,6 +401,7 @@ class MainWindow(QtGui.QMainWindow):
         self.model.begin = model
         view = BandView(model)
         self.view.add_child(view, 0)
+        self.view_map[model] = view
 
     def remove_begin_band(self):
         self.remove_band('begin')
@@ -369,6 +412,7 @@ class MainWindow(QtGui.QMainWindow):
         view = BandView(model)
         position = 1 if self.model.begin else 0
         self.view.add_child(view, position)
+        self.view_map[model] = view
 
     def remove_header_band(self):
         self.remove_band('header')
@@ -379,6 +423,7 @@ class MainWindow(QtGui.QMainWindow):
         view = BandView(model)
         position = len(self.view.children) - 1 if self.model.summary else None
         self.view.add_child(view, position)
+        self.view_map[model] = view
 
     def remove_footer_band(self):
         self.remove_band('footer')
@@ -388,9 +433,22 @@ class MainWindow(QtGui.QMainWindow):
         self.model.summary = model
         view = BandView(model)
         self.view.add_child(view, None)
+        self.view_map[model] = view
 
     def remove_summary_band(self):
         self.remove_band('summary')
+
+    def add_section(self):
+        model = SectionModel(self.model)
+        self.model.sections.append(model)
+        view = SectionModel(model)
+        self.view.add_child(view, None)
+
+    def add_detail_band(self, section):
+        model = DetailBandModel(section)
+        section.children.append(model)
+        #view = DetailBandView(model)
+        #self.view.children()
 
 
 class DesignerApp(QtGui.QApplication):

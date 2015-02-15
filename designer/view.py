@@ -136,6 +136,11 @@ class BandView(QtGui.QGraphicsRectItem):
         child.setParentItem(self)
         child.setPos(element.left, element.top)
         self.children.insert(pos, child)
+        return child
+
+    def remove_child(self, child):
+        child.setParentItem(None)
+        self.children.remove(child)
 
     def setWidth(self, width):
         self.width = width
