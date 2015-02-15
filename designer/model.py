@@ -56,6 +56,7 @@ class TextModel(ElementModel):
         json = super().save()
         json['expand'] = self.expand
         json['font'] = self.font
+        return json
 
 
 class LabelModel(TextModel):
