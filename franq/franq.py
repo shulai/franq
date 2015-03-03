@@ -388,44 +388,46 @@ class ReportRenderer(object):
         try:
             groupingLevel = 0
             dataItem = ds.getDataItem()
-            if not dataItem:
+            if not dataItem and not detailBand.renderIfEmpty:
                 return
             self._printDetailBegin(detailBand, dataItem)
             self._printColumnHeader(detailBand, dataItem)
-            # Print first round of group headers
-            for group in detailBand.groups:
-                groupingLevel += 1
-                group.value = group.expression(dataItem)
-                if group.header:
-                    self._renderBandColumnWide(group.header, dataItem, True)
 
-            while True:
-
-                # Print headers
-                # TODO: Can I use this to print the first round?
-                for group in detailBand.groups[groupingLevel:]:
+            if dataItem:
+                # Print first round of group headers
+                for group in detailBand.groups:
                     groupingLevel += 1
                     group.value = group.expression(dataItem)
                     if group.header:
                         self._renderBandColumnWide(group.header, dataItem, True)
 
-                self._renderBandColumnWide(detailBand, dataItem, True)
+                while True:
 
-                for subdetail in detailBand.subdetails:
-                    self._renderDetailBand(subdetail,
-                        getattr(dataItem, subdetail.dataSet))
+                    # Print headers
+                    # TODO: Can I use this to print the first round?
+                    for group in detailBand.groups[groupingLevel:]:
+                        groupingLevel += 1
+                        group.value = group.expression(dataItem)
+                        if group.header:
+                            self._renderBandColumnWide(group.header, dataItem, True)
 
-                dataItem = ds.nextDataItem()
+                    self._renderBandColumnWide(detailBand, dataItem, True)
 
-                for group in detailBand.groups[::-1]:
-                    new_group_value = group.expression(dataItem)
-                    if new_group_value == group.value:
-                        break
-                    groupingLevel -= 1
-                    group.value = new_group_value
-                    if group.footer:
-                        self._renderBandColumnWide(group.footer,
-                            ds.getPrevDataItem(), True)
+                    for subdetail in detailBand.subdetails:
+                        self._renderDetailBand(subdetail,
+                            getattr(dataItem, subdetail.dataSet))
+
+                    dataItem = ds.nextDataItem()
+
+                    for group in detailBand.groups[::-1]:
+                        new_group_value = group.expression(dataItem)
+                        if new_group_value == group.value:
+                            break
+                        groupingLevel -= 1
+                        group.value = new_group_value
+                        if group.footer:
+                            self._renderBandColumnWide(group.footer,
+                                ds.getPrevDataItem(), True)
 
         except DataSourceExausted:
             pass  # Out of loop
@@ -525,14 +527,15 @@ class Band(BaseElement):
             default False.
         forceNewPageAfter: boolean, Start a new page before start printing the
             band, default False.
-
+        expand: boolean, if False honors height attribute, if True expands
+            height to accomodate elements if necessary
     """
     height = 20 * mm
     elements = []
     child = None
     forceNewPage = False
     forceNewPageAfter = False
-    expand = None
+    expand = False
     dataSet = None
     renderBand = True
 
@@ -606,6 +609,7 @@ class DetailBand(Band):
     columnFooter = None
     begin = None
     summary = None
+    renderIfEmpty = False
 
 
 class DetailGroup(object):
