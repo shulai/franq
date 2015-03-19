@@ -737,7 +737,7 @@ class TextElement(Element):
             doc = QTextDocument()
             doc.documentLayout().setPaintDevice(painter.device())
             doc.setPageSize(elementRect.size())
-            doc.defaultFont = painter.font()
+            doc.setDefaultFont(painter.font())
             doc.setHtml(text)
             painter.translate(elementRect.topLeft())
             doc.drawContents(painter)
