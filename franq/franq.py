@@ -573,7 +573,7 @@ class Band(BaseElement):
 
         if self.expand:
             band_rect = QRectF(rect.left(), rect.top(),
-                 rect.width(), self._bandRenderHeight(data_item))
+                 rect.width(), self._bandRenderHeight(painter, data_item))
         else:
             band_rect = QRectF(rect.left(), rect.top(),
                  rect.width(), self.height)
