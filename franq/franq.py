@@ -448,8 +448,16 @@ class ReportRenderer(object):
         self.__columnWidth = (self.__pageWidth - section.columnSpace *
             (section.columns - 1)) / section.columns
 
-        for detailBand in section.detailBands:
-            self._renderDetailBand(detailBand)
+        for band in section.detailBands:
+            if isinstance(band, DetailBand):
+                self._renderDetailBand(band)
+            else:
+                try:
+                    ds = self._dataSources[self._report.dataSet]
+                    dataItem = ds.getDataItem()
+                except (KeyError, DataSourceExausted):
+                    dataItem = None
+                self._renderBandColumnWide(band, dataItem, False)
 
     def render(self, printer, dataSources):
         rpt = self._report
