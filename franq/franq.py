@@ -696,15 +696,23 @@ class TextElement(Element):
     expand = False
 
     def _expandHeight(self, painter, text):
-        fm = QFontMetricsF(painter.font())
-        bound_rect = fm.boundingRect(
-            QRectF(self.left, self.top, self.width, self.height),
-            self.textOptions.flags() | Qt.TextWordWrap,
-            text)
-        return max(self.height, bound_rect.height())
+        if self.richText:
+            doc = QTextDocument()
+            doc.setDefaultFont(painter.font())
+            doc.setTextWidth(self.width)
+            doc.setHtml(text)
+            print('rich text height', doc.size().height())
+            return max(self.height, doc.size().height())
+        else:
+            fm = QFontMetricsF(painter.font())
+            bound_rect = fm.boundingRect(
+                QRectF(self.left, self.top, self.width, self.height),
+                self.textOptions.flags() | Qt.TextWordWrap,
+                text)
+            return max(self.height, bound_rect.height())
 
     def renderHeight(self, painter, data_item):
-        if self.expand and not self.richText:
+        if self.expand:
             text = self._text(data_item)
             return self._expandHeight(painter, text)
         else:
@@ -742,7 +750,6 @@ class TextElement(Element):
             painter.translate(elementRect.topLeft())
             doc.drawContents(painter)
             painter.resetTransform()
-            print doc.toHtml()
         else:
             textOptions = self.textOptions
             textOptions.setWrapMode(QTextOption.WordWrap)
