@@ -17,4 +17,4 @@
 # along with Franq; If not, see <http://www.gnu.org/licenses/>.
 from . franq import *
 from .util import *
-__version__ = '0.9.4'
+__version__ = '0.9.5'
