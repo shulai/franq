@@ -16,7 +16,7 @@ from PyQt4.QtCore import Qt, pyqtSlot
 from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
     FunctionModel)
-from view import ReportView, BandView, DetailBandView
+from view import ReportView, BandView, SectionView
 from properties import property_tables
 
 
@@ -46,7 +46,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.graphicsView.customContextMenuRequested.connect(self.showContextMenu)
         self.model = None
         self.view = None
-        self.view_map = {}
+        #self.view_map = {}
         self.selected = None
         self.mode = 'select'
         self._context_menu = QtGui.QMenu()
@@ -275,6 +275,7 @@ class MainWindow(QtGui.QMainWindow):
             item_top += item.height + space_between
 
     def select_element(self, element):
+        print('select', element)
         self.selected = element
         self.property_table = property_tables[type(element)]
         self.property_table.setModel(element)
@@ -308,6 +309,10 @@ class MainWindow(QtGui.QMainWindow):
             if not element.summary:
                 action = self._context_menu.addAction('Add summary band')
                 action.triggered.connect(self.add_summary_band)
+
+            action = self._context_menu.addAction('Add section')
+            action.triggered.connect(self.add_section)
+
         elif isinstance(element, BandModel):
             action = self._context_menu.addAction(
                 QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
@@ -344,40 +349,34 @@ class MainWindow(QtGui.QMainWindow):
             pass
 
     def add_element(self, ElementClass):
-        print('add_element')
         view_item = self.scene.selectedItems()[0]
         if not view_item:
             return
         elif isinstance(view_item.model, ReportModel):
-            print(view_item.model, 'return')
             return
         if isinstance(view_item.model, ElementModel):
             band = view_item.parentItem().model
         else:
             band = view_item.model
 
-        el = ElementClass(band)
-        band.elements.append(el)
+        element = ElementClass()
 
         cursor_pos = self.ui.graphicsView.mapFromGlobal(QtGui.QCursor.pos())
         cursor_scene_pos = self.ui.graphicsView.mapToScene(cursor_pos)
         el_pos = view_item.mapFromScene(cursor_scene_pos)
-        el.left = el_pos.x()
-        el.top = el_pos.y()
+        element.left = el_pos.x()
+        element.top = el_pos.y()
 
-        view = view_item.add_child(el, -1)
-        self.view_map[el] = view
+        band.add_element(element)
 
-        self.select_element(el)
+        self.select_element(element)
         self.mode = 'select'
 
     def remove_element(self):
-        model = self.selected
-        view = self.view_map[model]
-        view.parentItem().remove_child(view)
-        self.scene.removeItem(view)
-        model.parent.elements.remove(model)
-        model.parent = None
+        element = self.selected
+        print('removing', element)
+        self.select_element(element.parent)
+        element.parent.remove_element(element)
 
     def add_label(self):
         self.add_element(LabelModel)
@@ -388,67 +387,45 @@ class MainWindow(QtGui.QMainWindow):
     def add_function(self):
         self.add_element(FunctionModel)
 
-    def remove_band(self, band_attr):
-        model = self.selected
-        view = self.view_map[model]
-        view.parentItem().remove_child(view)
-        self.scene.removeItem(view)
-        model.parent = None
-        setattr(self.model, band_attr, None)
+    def add_report_band(self, band_attr, band):
+        self.model.add_band(band_attr, band)
+        self.select_element(band)
+
+    def remove_report_band(self, band_attr):
+        self.model.remove_band(band_attr)
+        self.select_element(self.model)
 
     def add_begin_band(self):
-        model = BandModel('Begin Band', self.model)
-        self.model.begin = model
-        view = BandView(model)
-        self.view.add_child(view, 0)
-        self.view_map[model] = view
+        self.add_report_band('begin', BandModel('Begin Band'))
 
     def remove_begin_band(self):
-        self.remove_band('begin')
+        self.remove_report_band('begin')
 
     def add_header_band(self):
-        model = BandModel('Header Band', self.model)
-        self.model.header = model
-        view = BandView(model)
-        position = 1 if self.model.begin else 0
-        self.view.add_child(view, position)
-        self.view_map[model] = view
+        self.add_report_band('header', BandModel('Header Band'))
 
     def remove_header_band(self):
-        self.remove_band('header')
+        self.remove_report_band('header')
 
     def add_footer_band(self):
-        model = BandModel('Footer Band', self.model)
-        self.model.footer = model
-        view = BandView(model)
-        position = len(self.view.children) - 1 if self.model.summary else None
-        self.view.add_child(view, position)
-        self.view_map[model] = view
+        self.add_report_band('footer', BandModel('Footer Band'))
 
     def remove_footer_band(self):
-        self.remove_band('footer')
+        self.remove_report_band('footer')
 
     def add_summary_band(self):
-        model = BandModel('Summary Band', self.model)
-        self.model.summary = model
-        view = BandView(model)
-        self.view.add_child(view, None)
-        self.view_map[model] = view
+        self.add_report_band('summary', BandModel('Summary Band'))
 
     def remove_summary_band(self):
-        self.remove_band('summary')
+        self.remove_report_band('summary')
 
     def add_section(self):
-        model = SectionModel(self.model)
-        self.model.sections.append(model)
-        view = SectionModel(model)
-        self.view.add_child(view, None)
+        section = SectionModel()
+        self.model.add_section(section)
 
     def add_detail_band(self, section):
-        model = DetailBandModel(section)
-        section.children.append(model)
-        #view = DetailBandView(model)
-        #self.view.children()
+        band = DetailBandModel()
+        section.add_band(band)
 
 
 class DesignerApp(QtGui.QApplication):

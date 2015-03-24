@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import QFont, QColor
+from PyQt4.QtGui import QFont
 from qonda.mvc.observable import ObservableObject, ObservableListProxy
 import franq
 
@@ -42,9 +42,9 @@ class CallGenerator:
 
 class ElementModel(ObservableObject):
 
-    def __init__(self, parent):
+    def __init__(self):
         super(ElementModel, self).__init__()
-        self.parent = parent
+        self.parent = None
         self.font = None
 
     def load(self, json):
@@ -73,8 +73,8 @@ class ElementModel(ObservableObject):
 
 class TextModel(ElementModel):
 
-    def __init__(self, parent):
-        super(TextModel, self).__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.top = 0.0
         self.left = 0.0
         self.width = 20 * mm
@@ -99,14 +99,15 @@ class TextModel(ElementModel):
             gen.param_font(self.font)
         return gen
 
+
 class LabelModel(TextModel):
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.text = 'Label'
 
     def load(self, json):
-        super(LabelModel, self).load(json)
+        super().load(json)
         self.text = json['text']
 
     def save(self):
@@ -125,18 +126,18 @@ class LabelModel(TextModel):
 
 class FieldModel(TextModel):
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.attrName = ''
         self.format = None
 
     def load(self, json):
-        super(FieldModel, self).load(json)
+        super().load(json)
         self.attrName = json['attrName']
         self.format = json['format']
 
     def save(self):
-        json = super(FieldModel, self).save()
+        json = super().save()
         json['type'] = 'field'
         json['attrName'] = self.attrName
         json['format'] = self.format
@@ -153,8 +154,8 @@ class FieldModel(TextModel):
 
 class FunctionModel(TextModel):
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.func = 'lambda o: str(o)'
 
     def load(self, json):
@@ -178,19 +179,19 @@ class FunctionModel(TextModel):
 class LineModel(ElementModel):
 
     def __init__(self):
-        super(LineModel, self).__init__()
+        super().__init__()
 
 
 class BoxModel(ElementModel):
 
     def __init__(self):
-        super(BoxModel, self).__init__()
+        super().__init__()
 
 
 class ImageModel(ElementModel):
 
     def __init__(self):
-        super(ImageModel, self).__init__()
+        super().__init__()
         self.fileName = None
 
     def load(self, json):
@@ -218,10 +219,10 @@ class BandModel(ObservableObject):
 
     _notifiables_ = ('description', 'height', 'pen', 'background', 'font')
 
-    def __init__(self, description, parent):
+    def __init__(self, description):
         super(BandModel, self).__init__()
         self.description = description
-        self.parent = parent
+        self.parent = None
         self.elements = ObservableListProxy()
         self.height = 20 * mm
         self.expand = False
@@ -229,6 +230,14 @@ class BandModel(ObservableObject):
 
     def active_font(self):
         return self.font if self.font else self.parent.active_font()
+
+    def add_element(self, element):
+        self.elements.append(element)
+        element.parent = self
+
+    def remove_element(self, element):
+        self.elements.remove(element)
+        element.parent = None
 
     def load(self, json):
 
@@ -273,24 +282,34 @@ class BandModel(ObservableObject):
 
 class DetailBandModel(BandModel):
 
-    def __init__(self, parent):
-        super(DetailBandModel, self).__init__('Detail Band', parent)
+    def __init__(self):
+        super().__init__('Detail Band')
         self.dataSet = None
 
     def load(self, json):
-        super(DetailBandModel, self).load(json)
+        super().load(json)
         if 'dataSet' in json:
             self.dataSet = json['dataSet']
 
 
 class SectionModel(ObservableObject):
 
-    def __init__(self, parent):
-        super(SectionModel, self).__init__()
-        self.parent = parent
+    def __init__(self):
+        super().__init__()
+        self.parent = None
         self.columns = 1
         self.columnSpace = 0.0
-        self.detailBands = ObservableListProxy([DetailBandModel(self)])
+        self.detailBands = ObservableListProxy([DetailBandModel()])
+
+    def add_band(self, band):
+        if not isinstance(band, BandModel):
+            raise ValueError("SectionModel.detailBands must contain BandModel")
+        self.detailBands.append(band)
+        band.parent = self
+
+    def remove_band(self, band):
+        self.detailBands.remove(band)
+        band.parent = None
 
     def load(self, json):
         self.columns = json['columns']
@@ -336,6 +355,25 @@ class ReportModel(ObservableObject):
 
     def active_font(self):
         return self.font
+
+    def add_band(self, band_attr, band):
+        if band_attr not in ('begin', 'summary', 'header', 'footer'):
+            raise ValueError('Invand band_attr')
+        setattr(self, band_attr, band)
+        band.parent = self
+
+    def remove_band(self, band_attr):
+        band = getattr(self, band_attr)
+        band.parent = None
+        setattr(self, band_attr, None)
+
+    def add_section(self, section):
+        self.sections.append(section)
+        section.parent = self
+
+    def remove_section(self, section):
+        self.section.remove(section)
+        section.parent = None
 
     def load(self, json):
         """

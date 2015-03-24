@@ -4,7 +4,7 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 from franq import inch, mm
 from model import (LabelModel, FieldModel, FunctionModel, LineModel, BoxModel,
-    ImageModel)
+    ImageModel, BandModel, DetailBandModel)
 
 WHITE = QtGui.QColor('white')
 BLACK = QtGui.QColor('black')
@@ -119,11 +119,12 @@ class BandView(QtGui.QGraphicsRectItem):
         self.model.elements.add_callback(self.observe_model_elements)
         self.height = self.model.height
 
-        self.children = []
+        self._children = []
+        self._element_map = {}
         for element in self.model.elements:
-            self.add_child(element, -1)
+            self._add_child(element, -1)
 
-    def add_child(self, element, pos):
+    def _add_child(self, element, pos):
         class_ = {
             LabelModel: LabelView,
             FieldModel: FieldView,
@@ -135,12 +136,21 @@ class BandView(QtGui.QGraphicsRectItem):
         child = class_(element)
         child.setParentItem(self)
         child.setPos(element.left, element.top)
-        self.children.insert(pos, child)
+        if pos is None:
+            self._children.append(child)
+        else:
+            self._children.insert(pos, child)
+        self._element_map[element] = child
+        print('add_child')
+        for m, v in zip(self.model.elements, self._children):
+            print(m, v.model)
         return child
 
-    def remove_child(self, child):
+    def _remove_child(self, pos):
+        child = self._children.pop(pos)
         child.setParentItem(None)
-        self.children.remove(child)
+        self.scene().removeItem(child)
+        del self._element_map[child.model]
 
     def setWidth(self, width):
         self.width = width
@@ -148,9 +158,7 @@ class BandView(QtGui.QGraphicsRectItem):
 
     def paint(self, painter, option, widget):
         super(BandView, self).paint(painter, option, widget)
-
         draw_grid(painter, self.rect())
-
         painter.setFont(DESC_FONT)
         painter.setPen(GRAY)
         painter.drawText(0, self.height - 10, self.model.description)
@@ -163,13 +171,15 @@ class BandView(QtGui.QGraphicsRectItem):
                     self.height)
                 self.parentItem().child_size_updated(self)
 
-    def observe_model_elements(self, sender, event_type, _, event_data):
+    def observe_model_elements(self, elements, event_type, _, event_data):
         if event_type == 'append':
-            self.add_child(sender[-1], -1)
+            self._add_child(elements[-1], None)
         elif event_type == 'insert':
-            self.add_child(sender[-1], event_data)
-        elif event_type == 'remove':
-            self.children.pop(event_data)
+            i = event_data
+            self._add_child(elements[i], i)
+        elif event_type == 'delitem':
+            index = event_data
+            self._remove_child(index)
 
 
 class DetailBandView(BandView):
@@ -198,6 +208,18 @@ class SectionView(QtGui.QGraphicsRectItem):
 
         # FIXME: Repeating bounds_updated
 
+    def observe_model_bands(self, bands, event_type, _, event_data):
+        if event_type == 'append':
+            band = bands[-1]
+            if isinstance(band, DetailBandModel):
+                child = DetailBandView(band)
+            elif isinstance(band, BandModel):
+                child = BandView(band)
+            else:
+                print("Error! SectionModel.detailBands can't contain this")
+            self.add_child(child)
+            self._element_map[child.model] = child
+
     def parent_size_updated(self):
         # Parent changed width, propagate to children
         self.bounds_updated()
@@ -208,6 +230,13 @@ class SectionView(QtGui.QGraphicsRectItem):
         # Child (child models) updated height, propagate to parent
         self.bounds_updated()
         self.parentItem().child_size_updated(self)
+
+    def add_child(self, child):
+        child.setParentItem(self)
+        child.setPos(0, self.height)
+        self.children.append(child)
+        self.height += child.height
+        return child
 
     def paint(self, painter, option, widget):
         super(SectionView, self).paint(painter, option, widget)
@@ -223,7 +252,9 @@ class ReportView(QtGui.QGraphicsRectItem):
         self.margin_pen = QtGui.QPen(Qt.DashLine)
 
         self.model = model
+        self.model.add_callback(self.observe_model)
         self.children = []
+        self._element_map = {}
         self.update_size()
 
         if self.model.header:
@@ -237,6 +268,49 @@ class ReportView(QtGui.QGraphicsRectItem):
             self.add_child(BandView(self.model.summary))
         if self.model.footer:
             self.add_child(BandView(self.model.footer))
+
+    def observe_model(self, model, event_type, _, attrs):
+        if event_type == 'update':
+            if 'begin' in attrs and model.begin is not None:
+                view = BandView(model.begin)
+                self.add_child(view, 0)
+                self._element_map[model.begin] = view
+            elif 'header' in attrs and model.header is not None:
+                view = BandView(model.header)
+                position = 1 if model.begin else 0
+                self.add_child(view, position)
+                self._element_map[model.header] = view
+            elif 'footer' in attrs and model.footer is not None:
+                view = BandView(model.footer)
+                position = (len(self.children) - 1
+                    if self.model.summary else None)
+                self.add_child(view, position)
+                self._element_map[model.footer] = view
+            elif 'summary' in attrs and model.summary is not None:
+                view = BandView(model.summary)
+                self.add_child(view, None)
+                self._element_map[model.summary] = view
+        elif event_type == 'before_update':
+            if 'begin' in attrs and model.begin is not None:
+                self.remove_child(self._element_map[model.begin])
+            elif 'header' in attrs and model.header is not None:
+                self.remove_child(self._element_map[model.header])
+            elif 'footer' in attrs and model.footer is not None:
+                self.remove_child(self._element_map[model.footer])
+            elif 'summary' in attrs and model.summary is not None:
+                self.remove_child(self._element_map[model.summary])
+
+    def observe_sections(self, sections, event_type, _, event_data):
+        if event_type == 'append':
+            section = sections[-1]
+            view = SectionView(section)
+            position = len(self.children)
+            if self.model.summary:
+                position -= 1
+            if self.model.footer:
+                position -= 1
+            self.add_child(view, position)
+            self._element_map[section] = view
 
     def update_size(self):
         printer = QtGui.QPrinter()
@@ -298,6 +372,7 @@ class ReportView(QtGui.QGraphicsRectItem):
         child.parent = None
         del self.children[position]
         child.setParentItem(None)
+        self.scene().removeItem(child)
         for other_child in self.children[position:]:
             other_child.moveBy(0, -child.height)
 
