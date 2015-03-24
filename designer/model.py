@@ -243,8 +243,9 @@ class BandModel(ObservableObject):
 
         def element(el_json):
             class_ = el_json['type']
-            e = element_classes[class_](self)
+            e = element_classes[class_]()
             e.load(el_json)
+            e.parent = self  # Assign here to be able to do comprehension below
             return e
 
         self.height = json['height']
@@ -317,9 +318,9 @@ class SectionModel(ObservableObject):
         if json['detailBands']:
             self.detailBands = ObservableListProxy()
             for json_detail in json['detailBands']:
-                detail = DetailBandModel(self)
+                detail = DetailBandModel()
                 detail.load(json_detail)
-                self.detailBands.append(detail)
+                self.add_band(detail)
 
     def save(self):
         json = {
@@ -390,21 +391,21 @@ class ReportModel(ObservableObject):
         self.font = QFont(*json['font'])
 
         if 'begin' in json and json['begin']:
-            self.begin = BandModel('Begin Band', self)
+            self.add_band('begin', BandModel('Begin Band'))
             self.begin.load(json['begin'])
         if 'header' in json and json['header']:
-            self.header = BandModel('Header Band', self)
+            self.add_band('header', BandModel('Header Band'))
             self.header.load(json['header'])
         if 'sections' in json and json['sections']:
             for json_section in json['sections']:
-                section = SectionModel(self)
+                section = SectionModel()
                 section.load(json_section)
-                self.sections.append(section)
+                self.add_section(section)
         if 'footer' in json and json['footer']:
-            self.footer = BandModel('Footer Band', self)
+            self.add_band('footer', BandModel('Footer Band'))
             self.footer.load(json['footer'])
         if 'summary' in json and json['summary']:
-            self.summary = BandModel('Summary Band', self)
+            self.add_band('summary', BandModel('Summary Band'))
             self.summary.load(json['summary'])
 
     def save(self):

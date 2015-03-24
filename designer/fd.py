@@ -170,7 +170,6 @@ class MainWindow(QtGui.QMainWindow):
         self.scene.clearSelection()
 
     def on_view_click(self):
-        print('on_view_click')
         {
             'select': self.select_item,
             'add_label': self.add_label,
@@ -275,7 +274,6 @@ class MainWindow(QtGui.QMainWindow):
             item_top += item.height + space_between
 
     def select_element(self, element):
-        print('select', element)
         self.selected = element
         self.property_table = property_tables[type(element)]
         self.property_table.setModel(element)
@@ -374,7 +372,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def remove_element(self):
         element = self.selected
-        print('removing', element)
         self.select_element(element.parent)
         element.parent.remove_element(element)
 
