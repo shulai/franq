@@ -19,9 +19,11 @@
 import sip
 sip.setapi("QString", 2)
 
-from PyQt4.QtCore import QPointF, QRectF, QSizeF
+import functools
+
+from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
 from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
-    QTextDocument)
+    QTextDocument, QFontMetricsF)
 
 inch = 300
 mm = 300 / 25.4
@@ -268,13 +270,19 @@ class ReportRenderer(object):
             rpt.margins[1], rpt.margins[2],
             QPrinter.DevicePixel)
 
-    def _newPage(self):
+    def _newPage(self, dataItem):
+        if (self._report.footer
+                and self.__y < self.__pageHeight - self.__footerHeight):
+            self._printPageFooter(dataItem)
+
         self.__printer.newPage()
         self.page += 1
         self.__y = 0.0
-        rpt.renderBorderAndBackground(self.__painter, rect)
+        self._printPageHeader(dataItem)
 
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
+        if band.forceNewPage:
+            self._newPage(dataItem)
         # Band own's dataset overrides provided by the caller
         # for detail bands it gets the same items as provided by the renderer!
         try:
@@ -282,25 +290,31 @@ class ReportRenderer(object):
             dataItem = ds.getDataItem()
         except KeyError:
             pass
-        height = band.renderHeight(dataItem)
+        height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewPage(dataItem)
         rect = QRectF(0.0, self.__y, self.__pageWidth, height)
-        band.render(self.__painter, rect, dataItem)
-        self.__y += height
+        if band.render(self.__painter, rect, dataItem):
+            self.__y += height
+        if band.forceNewPageAfter:
+            self._newPage(dataItem)
 
     def _renderBandColumnWide(self, band, dataItem, checkEnd=True):
+        if band.forceNewPage:
+            self._newPage(dataItem)
         try:
             ds = self._dataSources[band.dataSet]
             dataItem = ds.getDataItem()
         except KeyError:
             pass
-        height = band.renderHeight(dataItem)
+        height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewColumn(dataItem)
         rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
-        band.render(self.__painter, rect, dataItem)
-        self.__y += height
+        if band.render(self.__painter, rect, dataItem):
+            self.__y += height
+        if band.forceNewPageAfter:
+            self._newPage(dataItem)
 
     def _printPageHeader(self, dataItem):
         if self._report.header is not None:
@@ -314,13 +328,9 @@ class ReportRenderer(object):
     def _printBegin(self, dataItem):
         if self._report.begin is not None:
             self._renderBandPageWide(self._report.begin, dataItem, False)
-            if self._report.begin.forceNewPageAfter:
-                self._newPage()
 
     def _printSummary(self, dataItem):
         if self._report.summary is not None:
-            if self._report.summary.forceNewPage:
-                self._newPage()
             self._renderBandPageWide(self._report.summary, dataItem, False)
 
     def _printColumnHeader(self, detailBand, dataItem):
@@ -329,8 +339,7 @@ class ReportRenderer(object):
 
     def _printColumnFooter(self, detailBand, dataItem):
         if detailBand.columnFooter is not None:
-            self.__y = self.__pageHeight - (self.__footerHeight +
-                self.__columnFooterHeight)
+            self.__y = self.__detailBottom
             self._renderBandColumnWide(detailBand.columnFooter, dataItem, False)
 
     def _printDetailBegin(self, detailBand, dataItem):
@@ -348,9 +357,7 @@ class ReportRenderer(object):
             self.__y = self.__detailTop
             self.__x += self.__columnWidth + self._currentSection.columnSpace
         else:
-            self._printPageFooter(dataItem)
-            self._newPage()
-            self._printPageHeader(dataItem)
+            self._newPage(dataItem)
             self.__col = 0
             self.__x = 0
         self._printColumnHeader(self._currentDetailBand, dataItem)
@@ -364,13 +371,14 @@ class ReportRenderer(object):
         """
         self._currentDetailBand = detailBand
         try:
-            detailFooterHeight = detailBand.columnFooter.renderHeight()
+            detailFooterHeight = detailBand.columnFooter.renderHeight(
+                self.__painter)
         except AttributeError:
             detailFooterHeight = 0
         self.__detailBottom = self.__pageHeight - (self.__footerHeight +
                 detailFooterHeight)
 
-        if dataSet:
+        if dataSet is not None:
             ds = DataSource(dataSet)
         elif detailBand.dataSet is not None:
             ds = self._dataSources[detailBand.dataSet]
@@ -380,42 +388,46 @@ class ReportRenderer(object):
         try:
             groupingLevel = 0
             dataItem = ds.getDataItem()
+            if not dataItem and not detailBand.renderIfEmpty:
+                return
             self._printDetailBegin(detailBand, dataItem)
             self._printColumnHeader(detailBand, dataItem)
-            # Print first round of group headers
-            for group in detailBand.groups:
-                groupingLevel += 1
-                group.value = group.expression(dataItem)
-                if group.header:
-                    self._renderBandColumnWide(group.header, dataItem, True)
 
-            while True:
-
-                # Print headers
-                # TODO: Can I use this to print the first round?
-                for group in detailBand.groups[groupingLevel:]:
+            if dataItem:
+                # Print first round of group headers
+                for group in detailBand.groups:
                     groupingLevel += 1
                     group.value = group.expression(dataItem)
                     if group.header:
                         self._renderBandColumnWide(group.header, dataItem, True)
 
-                self._renderBandColumnWide(detailBand, dataItem, True)
+                while True:
 
-                for subdetail in detailBand.subdetails:
-                    self._renderDetailBand(subdetail,
-                        getattr(dataItem, subdetail.dataSet))
+                    # Print headers
+                    # TODO: Can I use this to print the first round?
+                    for group in detailBand.groups[groupingLevel:]:
+                        groupingLevel += 1
+                        group.value = group.expression(dataItem)
+                        if group.header:
+                            self._renderBandColumnWide(group.header, dataItem, True)
 
-                dataItem = ds.nextDataItem()
+                    self._renderBandColumnWide(detailBand, dataItem, True)
 
-                for group in detailBand.groups[::-1]:
-                    new_group_value = group.expression(dataItem)
-                    if new_group_value == group.value:
-                        break
-                    groupingLevel -= 1
-                    group.value = new_group_value
-                    if group.footer:
-                        self._renderBandColumnWide(group.footer,
-                            ds.getPrevDataItem(), True)
+                    for subdetail in detailBand.subdetails:
+                        self._renderDetailBand(subdetail,
+                            getattr(dataItem, subdetail.dataSet))
+
+                    dataItem = ds.nextDataItem()
+
+                    for group in detailBand.groups[::-1]:
+                        new_group_value = group.expression(dataItem)
+                        if new_group_value == group.value:
+                            break
+                        groupingLevel -= 1
+                        group.value = new_group_value
+                        if group.footer:
+                            self._renderBandColumnWide(group.footer,
+                                ds.getPrevDataItem(), True)
 
         except DataSourceExausted:
             pass  # Out of loop
@@ -428,7 +440,6 @@ class ReportRenderer(object):
                     self._renderBandColumnWide(group.footer,
                         ds.getPrevDataItem(), True)
 
-        self._printColumnFooter(detailBand, ds.getPrevDataItem())
         self._printDetailSummary(detailBand, ds.getPrevDataItem())
 
     def _renderSection(self, section):
@@ -437,8 +448,16 @@ class ReportRenderer(object):
         self.__columnWidth = (self.__pageWidth - section.columnSpace *
             (section.columns - 1)) / section.columns
 
-        for detailBand in section.detailBands:
-            self._renderDetailBand(detailBand)
+        for band in section.detailBands:
+            if isinstance(band, DetailBand):
+                self._renderDetailBand(band)
+            else:
+                try:
+                    ds = self._dataSources[self._report.dataSet]
+                    dataItem = ds.getDataItem()
+                except (KeyError, DataSourceExausted):
+                    dataItem = None
+                self._renderBandColumnWide(band, dataItem, False)
 
     def render(self, printer, dataSources):
         rpt = self._report
@@ -486,7 +505,7 @@ class ReportRenderer(object):
         # If I don't, I'll be never sure when I must print the footer
         # just by looking at a single detail item
         if rpt.footer is not None:
-            self.__footerHeight = rpt.footer.renderHeight()
+            self.__footerHeight = rpt.footer.renderHeight(self.__painter)
         else:
             self.__footerHeight = 0
 
@@ -516,38 +535,45 @@ class Band(BaseElement):
             default False.
         forceNewPageAfter: boolean, Start a new page before start printing the
             band, default False.
-
+        expand: boolean, if False honors height attribute, if True expands
+            height to accomodate elements if necessary
     """
     height = 20 * mm
     elements = []
     child = None
     forceNewPage = False
     forceNewPageAfter = False
-    expand = None
+    expand = False
     dataSet = None
+    renderBand = True
 
-    def _bandRenderHeight(self, data_item=None):
+    def _bandRenderHeight(self, painter, data_item=None):
         height = self.height
         for element in self.elements:
-            elementBottom = element.top + element.renderHeight(data_item)
+            elementBottom = element.top + element.renderHeight(painter,
+                data_item)
             if elementBottom > height:
                 height = elementBottom
         return height
 
-    def renderHeight(self, data_item=None):
-        height = self._bandRenderHeight(data_item)
+    def renderHeight(self, painter, data_item=None):
+        height = self._bandRenderHeight(painter, data_item)
         if self.child:
-            height += self.child.renderHeight(data_item)
+            height += self.child.renderHeight(painter, data_item)
         return height
 
     def render(self, painter, rect, data_item=None):
 
+        self.renderBand = True
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
 
+        if not self.renderBand:
+            return False
+
         if self.expand:
             band_rect = QRectF(rect.left(), rect.top(),
-                 rect.width(), self._bandRenderHeight(data_item))
+                 rect.width(), self._bandRenderHeight(painter, data_item))
         else:
             band_rect = QRectF(rect.left(), rect.top(),
                  rect.width(), self.height)
@@ -563,6 +589,7 @@ class Band(BaseElement):
             self.child.render(painter, child_rect, data_item)
 
         self.renderTearDown(painter)
+        return True
 
 
 class DetailBand(Band):
@@ -575,12 +602,12 @@ class DetailBand(Band):
         ----------
         * groups: List of DetailGroup, default empty list.
         * subdetails: List of DetailBand, default empty list.
-        * columnHeader: Header Band for the column, useful for detail titles,
+        * columnHeader: Header Band for the detail/column,
             default None.
-        * columnFooter: Footer Band for the column, useful for detail summaries,
+        * columnFooter: Footer Band for the detail/column,
             default None.
-        * detailBegin: Band preceding the detail, default None.
-        * detailSummary: Band after the detail, default None.
+        * begin: Band preceding the detail, default None.
+        * summary: Band after the detail, default None.
 
     """
     groups = []
@@ -590,6 +617,7 @@ class DetailBand(Band):
     columnFooter = None
     begin = None
     summary = None
+    renderIfEmpty = False
 
 
 class DetailGroup(object):
@@ -638,7 +666,7 @@ class Element(BaseElement):
     width = 100 * mm
     height = 5 * mm
 
-    def renderHeight(self, data_item):
+    def renderHeight(self, painter, data_item):
         return self.height
 
     def render(painter, rect, data_item):
@@ -653,48 +681,80 @@ class TextElement(Element):
 
         Properties
         ----------
+        * expand: Increase effective height if necessary to make the value
+            fit. Default True.
+        * noRepeat: Don't print again if it's the same value as the last
+            record. Default False.
+        * richText: Render the value as HTML code. Default False.
         * textOptions: QTextOption, mainly used for text alignment.
+
     """
     textOptions = QTextOption()
     noRepeat = False
     _lastText = None
     richText = False
+    expand = False
 
-    def renderHeight(self, data_item):
-        # TODO: Make renderHeight calculate required height
-        # fm = QFontMetrics(font)
-        # return fm.boundingRect(self.left, self.top, self.width, self.height,
-        #    self.textOptions.flags(), self._text()).height()
-        # Required:
-        # Implement self._text() in descendants, call _text() in _render and
-        # rename it to render, delete render() in descendants
-        # QFontMetrics requires font, will need font from band/report
-        # either as a parameter or receiving painter as a parameter
-        return self.height
+    def _expandHeight(self, painter, text):
+        if self.richText:
+            doc = QTextDocument()
+            doc.setDefaultFont(painter.font())
+            doc.setTextWidth(self.width)
+            doc.setHtml(text)
+            print('rich text height', doc.size().height())
+            return max(self.height, doc.size().height())
+        else:
+            fm = QFontMetricsF(painter.font())
+            bound_rect = fm.boundingRect(
+                QRectF(self.left, self.top, self.width, self.height),
+                self.textOptions.flags() | Qt.TextWordWrap,
+                text)
+            return max(self.height, bound_rect.height())
 
-    def _render(self, painter, rect, text):
+    def renderHeight(self, painter, data_item):
+        if self.expand:
+            text = self._text(data_item)
+            return self._expandHeight(painter, text)
+        else:
+            return self.height
+
+    def render(self, painter, rect, data_item):
+        if self.on_before_print is not None:
+            self.on_before_print(self, data_item)
+
+        text = self._text(data_item)
+
         if self.noRepeat and self._lastText == text:
             return
         self._lastText = text
+
         self.renderSetup(painter)
         if self.font:
             parent_font = painter.font()
             painter.setFont(self.font)
-        elementRect = QRectF(QPointF(self.left, self.top) + rect.topLeft(),
-            QSizeF(self.width, self.height))
+        if self.expand:
+            effectiveHeight = self._expandHeight(painter, text)
+        else:
+            effectiveHeight = self.height
+        elementRect = QRectF(
+            QPointF(self.left, self.top) + rect.topLeft(),
+            QSizeF(self.width, effectiveHeight))
         self.renderBorderAndBackground(painter, elementRect)
+
         if self.richText:
             doc = QTextDocument()
             doc.documentLayout().setPaintDevice(painter.device())
             doc.setPageSize(elementRect.size())
-            doc.defaultFont = painter.font()
+            doc.setDefaultFont(painter.font())
             doc.setHtml(text)
             painter.translate(elementRect.topLeft())
             doc.drawContents(painter)
             painter.resetTransform()
-            print doc.toHtml()
         else:
-            painter.drawText(elementRect, unicode(text), self.textOptions)
+            textOptions = self.textOptions
+            textOptions.setWrapMode(QTextOption.WordWrap)
+            painter.drawText(elementRect, unicode(text),
+                textOptions)
         self.renderTearDown(painter)
 
 
@@ -708,11 +768,9 @@ class Label(TextElement):
         ----------
         * text: unicode, text value of the Label.
     """
-    def render(self, painter, rect, data_item):
-        if self.on_before_print is not None:
-            self.on_before_print(self, data_item)
 
-        self._render(painter, rect, self.text)
+    def _text(self, data_item):
+        return self.text
 
 
 class Field(TextElement):
@@ -725,10 +783,13 @@ class Field(TextElement):
         Properties
         ----------
         * attrName: str, attribute name.
+        * formatter: callable, optional, default None.
         * formatStr: unicode, optional Python standard formatting string,
             default None.
+        If both formatter and formatStr are set, formatter is used.
     """
     formatStr = None
+    formatter = None
 
     def _get_value(self, data_item):
         value = None
@@ -748,18 +809,16 @@ class Field(TextElement):
             value = '<Error>'
         return value
 
-    def render(self, painter, rect, data_item):
-        if self.on_before_print is not None:
-            self.on_before_print(self, data_item)
-
-        if self.formatStr:
-            self._render(painter, rect,
-                self.formatStr.format(self._get_value(data_item)))
+    def _text(self, data_item):
+        if self.formatter:
+            return self.formatter(self._get_value(data_item))
+        elif self.formatStr:
+            return self.formatStr.format(self._get_value(data_item))
         else:
             v = self._get_value(data_item)
             if v is None:
                 v = ''
-            self._render(painter, rect, v)
+            return v
 
 
 class Function(TextElement):
@@ -773,12 +832,27 @@ class Function(TextElement):
         * func: callable, usually a lambda or a report method, receives the
             data item as parameter, returns unicode value to render.
     """
-    def render(self, painter, rect, data_item):
-        if self.on_before_print is not None:
-            self.on_before_print(self, data_item)
 
-        value = self.func(data_item)
-        self._render(painter, rect, value)
+    def __init__(self, **kw):
+        super(TextElement, self).__init__(**kw)
+        self._last_id = None
+        self._last_value = None
+
+    def _text(self, data_item):
+        # Avoid calling func twice with the same argument
+        # _last_id is reset in render() as the main reason to do caching
+        # is to reuse the value for renderHeight() and render() calls.
+        # Also, when the Function object is created as a report class member
+        # the _last_id is preserved between report renderings leading
+        # to incorrect behaviour if caching is allowed
+        if id(data_item) != self._last_id:
+            self._last_id = id(data_item)
+            self._last_value = self.func(data_item)
+        return self._last_value
+
+    def render(self, painter, rect, data_item):
+        super().render(painter, rect, data_item)
+        self._last_id = None
 
 
 class Line(Element):
