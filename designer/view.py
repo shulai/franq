@@ -141,9 +141,6 @@ class BandView(QtGui.QGraphicsRectItem):
         else:
             self._children.insert(pos, child)
         self._element_map[element] = child
-        print('add_child')
-        for m, v in zip(self.model.elements, self._children):
-            print(m, v.model)
         return child
 
     def _remove_child(self, pos):
@@ -197,16 +194,14 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.model = model
 
         self.children = []
-        if hasattr(self.model, 'detailBands'):
-            self.height = 0.0
-            for detail_model in self.model.detailBands:
-                detail = DetailBandView(detail_model)
-                detail.setParentItem(self)
-                detail.setPos(0, self.height)
-                self.children.append(detail)
-                self.height += detail.height
 
-        # FIXME: Repeating bounds_updated
+        self.height = 0.0
+        for detail_model in self.model.detailBands:
+            detail = DetailBandView(detail_model)
+            detail.setParentItem(self)
+            detail.setPos(0, self.height)
+            self.children.append(detail)
+            self.height += detail.height
 
     def observe_model_bands(self, bands, event_type, _, event_data):
         if event_type == 'append':
@@ -253,6 +248,7 @@ class ReportView(QtGui.QGraphicsRectItem):
 
         self.model = model
         self.model.add_callback(self.observe_model)
+        self.model.sections.add_callback(self.observe_sections)
         self.children = []
         self._element_map = {}
         self.update_size()
