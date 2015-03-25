@@ -110,7 +110,7 @@ class FunctionView(TextView):
 
 class BandView(QtGui.QGraphicsRectItem):
     def __init__(self, model):
-        super(BandView, self).__init__()
+        super().__init__()
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
         self.setBrush(WHITE)
 
@@ -149,7 +149,7 @@ class BandView(QtGui.QGraphicsRectItem):
         self.scene().removeItem(child)
         del self._element_map[child.model]
 
-    def setWidth(self, width):
+    def set_width(self, width):
         self.width = width
         self.setRect(0, 0, self.width, self.height)
 
@@ -196,12 +196,33 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.children = []
 
         self.height = 0.0
+        self.width = 0.0
+
         for detail_model in self.model.detailBands:
             detail = DetailBandView(detail_model)
             detail.setParentItem(self)
             detail.setPos(0, self.height)
             self.children.append(detail)
             self.height += detail.height
+
+        self.update_children_width()
+        self.model.add_callback(self.observe_model)
+        self.model.detailBands.add_callback(self.observe_model_bands)
+
+    def set_width(self, width):
+        self.width = width
+        self.update_children_width()
+
+    def update_children_width(self):
+        self.children_width = (self.width - self.model.columnSpace *
+            (self.model.columns - 1)) / self.model.columns
+        for child in self.children:
+            child.set_width(self.children_width)
+
+    def observe_model(self, model, event_type, _, attrs):
+        if event_type == 'update':
+            if 'columns' in attrs or 'columnSpace' in attrs:
+                self.update_children_width()
 
     def observe_model_bands(self, bands, event_type, _, event_data):
         if event_type == 'append':
@@ -215,33 +236,34 @@ class SectionView(QtGui.QGraphicsRectItem):
             self.add_child(child)
             self._element_map[child.model] = child
 
-    def parent_size_updated(self):
-        # Parent changed width, propagate to children
-        self.bounds_updated()
-        for child in self.children:
-            child.parent_size_updated()
-
     def child_size_updated(self, child):
         # Child (child models) updated height, propagate to parent
-        self.bounds_updated()
+        child_top = child.mapRectToParent(child.boundingRect()).bottom()
+        i = self.children.index(child)
+        for child in self.children[i + 1:]:
+            child.setPos(0, child_top)
+            child_top += child.height
+        self.height = child_top
+        self.setRect(0, 0, self.width, self.height)
         self.parentItem().child_size_updated(self)
 
     def add_child(self, child):
         child.setParentItem(self)
         child.setPos(0, self.height)
+        child.set_width(self.width)
         self.children.append(child)
         self.height += child.height
         return child
 
     def paint(self, painter, option, widget):
-        super(SectionView, self).paint(painter, option, widget)
+        super().paint(painter, option, widget)
         draw_grid(painter, self.rect())
 
 
 class ReportView(QtGui.QGraphicsRectItem):
 
     def __init__(self, model):
-        super(ReportView, self).__init__()
+        super().__init__()
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
         self.setBrush(WHITE)
         self.margin_pen = QtGui.QPen(Qt.DashLine)
@@ -328,11 +350,6 @@ class ReportView(QtGui.QGraphicsRectItem):
             child.setPos(self.children_left, child_top)
             child_top += child.height
 
-    #def model_size_updated(self):
-        #self.update_size()
-        #for child in self.children:
-            #child.setWidth(self.children_width)
-
     def child_size_updated(self, child):
         child_top = child.mapRectToParent(child.boundingRect()).bottom()
         i = self.children.index(child)
@@ -349,7 +366,7 @@ class ReportView(QtGui.QGraphicsRectItem):
             else:
                 child_top = self.model.margins[0]
             child.setPos(self.children_left, child_top)
-            child.setRect(0, 0, self.children_width, child.height)
+            child.set_width(self.children_width)
             self.children.append(child)
         else:
             if position == 0:
@@ -358,7 +375,7 @@ class ReportView(QtGui.QGraphicsRectItem):
                 child_top = self.children[position - 1].mapRectToParent(
                 self.children[position - 1].boundingRect()).bottom()
             child.setPos(self.children_left, child_top)
-            child.setRect(0, 0, self.children_width, child.height)
+            child.set_width(self.children_width)
             self.children.insert(position, child)
             for other_child in self.children[position + 1:]:
                 other_child.moveBy(0, child.height)
