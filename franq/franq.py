@@ -409,13 +409,18 @@ class ReportRenderer(object):
                         groupingLevel += 1
                         group.value = group.expression(dataItem)
                         if group.header:
-                            self._renderBandColumnWide(group.header, dataItem, True)
+                            self._renderBandColumnWide(group.header, dataItem,
+                                True)
 
                     self._renderBandColumnWide(detailBand, dataItem, True)
 
                     for subdetail in detailBand.subdetails:
-                        self._renderDetailBand(subdetail,
-                            getattr(dataItem, subdetail.dataSet))
+                        if isinstance(subdetail, DetailBand):
+                            self._renderDetailBand(subdetail,
+                                getattr(dataItem, subdetail.dataSet))
+                        else:
+                            self._renderBandColumnWide(subdetail, dataItem,
+                                False)
 
                     dataItem = ds.nextDataItem()
 
