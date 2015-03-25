@@ -283,6 +283,7 @@ class ReportRenderer(object):
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
         if band.forceNewPage:
             self._newPage(dataItem)
+
         # Band own's dataset overrides provided by the caller
         # for detail bands it gets the same items as provided by the renderer!
         try:
@@ -300,13 +301,23 @@ class ReportRenderer(object):
             self._newPage(dataItem)
 
     def _renderBandColumnWide(self, band, dataItem, checkEnd=True):
-        if band.forceNewPage:
-            self._newPage(dataItem)
         try:
             ds = self._dataSources[band.dataSet]
             dataItem = ds.getDataItem()
         except KeyError:
             pass
+
+        if band.forceNewPage:
+            self._newPage(dataItem)
+        else:
+            # FIXME: Only works if band's dataSet attribute is defined
+            try:
+                if band.startNewPage and ds.getPrevDataItem():
+                    self._newPage(dataItem)
+            except UnboundLocalError:  # Ignore if no datasource
+                print('UnboundLocalError')
+                pass
+
         height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewColumn(dataItem)
@@ -536,10 +547,15 @@ class Band(BaseElement):
         elements: list of Element objects.
         child: A Band to be printed after this band, being separate allows
             for example page breaks.
+        dataSet: The dataset for its elements, overrides dataSet defined at
+            Report level.
         forceNewPage: boolean. Start a new page before start printing the band,
             default False.
         forceNewPageAfter: boolean, Start a new page before start printing the
             band, default False.
+        startNewPage: boolean. Start a new page before start printing the band,
+            when no previous data in the DataSet.
+            default False.
         expand: boolean, if False honors height attribute, if True expands
             height to accomodate elements if necessary
     """
@@ -548,6 +564,7 @@ class Band(BaseElement):
     child = None
     forceNewPage = False
     forceNewPageAfter = False
+    startNewPage = False
     expand = False
     dataSet = None
     renderBand = True
