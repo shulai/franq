@@ -312,9 +312,9 @@ class MainWindow(QtGui.QMainWindow):
             action.triggered.connect(self.add_section)
 
         elif isinstance(element, BandModel):
-            action = self._context_menu.addAction(
-                QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
             if element.parent == self.model:
+                action = self._context_menu.addAction(
+                    QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
                 slots = {
                     self.model.begin: self.remove_begin_band,
                     self.model.header: self.remove_header_band,
@@ -323,8 +323,45 @@ class MainWindow(QtGui.QMainWindow):
                     }
                 action.triggered.connect(slots[element])
             elif isinstance(element.parent, SectionModel):
-                action.triggered.connect(self.remove_detail_band)
+                if len(element.parent.detailBands) > 1:
+                    action = self._context_menu.addAction(
+                    QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
+                    action.triggered.connect(self.remove_section_band)
+
+                if isinstance(element, DetailBandModel):
+                    if not element.detailBegin:
+                        action = self._context_menu.addAction(
+                            'Add detail begin band')
+                        #action.triggered.connect(self.add_section_band)
+
+                    if not element.columnHeader:
+                        action = self._context_menu.addAction(
+                            'Add column header band')
+                        #action.triggered.connect(self.add_section_band)
+
+                    if not element.columnFooter:
+                        action = self._context_menu.addAction(
+                            'Add column footer band')
+
+                    if not element.detailSummary:
+                        action = self._context_menu.addAction(
+                            'Add detail summary band')
+                        #action.triggered.connect(self.add_section_band)
+
+                if not element.child:
+                    action = self._context_menu.addAction('Add child band')
+                    #action.triggered.connect(self.add_child_band)
+
+                self._context_menu.addSeparator()
+                action = self._context_menu.addAction('Add detail band')
+                action.triggered.connect(self.add_section_detailband)
+
+                action = self._context_menu.addAction('Add regular band')
+                action.triggered.connect(self.add_section_band)
+
             elif isinstance(element.parent, BandModel):
+                action = self._context_menu.addAction(
+                    QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
                 if element.parent.child == element:
                     action.triggered.connect(self.remove_child_band)
                 elif isinstance(element.parent, DetailBandModel):
@@ -420,9 +457,24 @@ class MainWindow(QtGui.QMainWindow):
         section = SectionModel()
         self.model.add_section(section)
 
-    def add_detail_band(self, section):
+    def remove_section(self):
+        section = self.selected.parent
+        self.model.remove_section(section)
+
+    def add_section_detailband(self):
+        section = self.selected.parent
         band = DetailBandModel()
         section.add_band(band)
+
+    def add_section_band(self):
+        section = self.selected.parent
+        band = BandModel('Band')
+        section.add_band(band)
+
+    def remove_section_band(self):
+        section = self.selected.parent
+        section.remove_band(band)
+        self.select_element(section)
 
 
 class DesignerApp(QtGui.QApplication):
