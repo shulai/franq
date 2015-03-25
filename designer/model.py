@@ -227,6 +227,7 @@ class BandModel(ObservableObject):
         self.height = 20 * mm
         self.expand = False
         self.font = None
+        self.child = None
 
     def active_font(self):
         return self.font if self.font else self.parent.active_font()
@@ -286,6 +287,10 @@ class DetailBandModel(BandModel):
     def __init__(self):
         super().__init__('Detail Band')
         self.dataSet = None
+        self.columnHeader = None
+        self.columnFooter = None
+        self.detailBegin = None
+        self.detailSummary = None
 
     def load(self, json):
         super().load(json)
