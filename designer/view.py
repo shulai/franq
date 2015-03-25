@@ -361,8 +361,8 @@ class ReportView(QtGui.QGraphicsRectItem):
         child.setParentItem(self)
         if position is None:
             if self.children:
-                child_top = self.children[-1].mapRectToParent(
-                    self.children[-1].boundingRect()).bottom()
+                child_top = (self.children[-1].pos().y()
+                    + self.children[-1].height)
             else:
                 child_top = self.model.margins[0]
             child.setPos(self.children_left, child_top)
@@ -372,8 +372,8 @@ class ReportView(QtGui.QGraphicsRectItem):
             if position == 0:
                 child_top = self.model.margins[0]
             else:
-                child_top = self.children[position - 1].mapRectToParent(
-                self.children[position - 1].boundingRect()).bottom()
+                child_top = (self.children[position - 1].pos().y()
+                    + self.children[-1].height)
             child.setPos(self.children_left, child_top)
             child.set_width(self.children_width)
             self.children.insert(position, child)
