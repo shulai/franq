@@ -331,6 +331,9 @@ class SectionModel(ObservableObject):
             json['detailBands'] = [detail.save() for detail in self.detailBands]
         return json
 
+    def active_font(self):
+        return self.parent.active_font()
+
 
 class ReportModel(ObservableObject):
 
