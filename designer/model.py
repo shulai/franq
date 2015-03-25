@@ -300,7 +300,8 @@ class SectionModel(ObservableObject):
         self.parent = None
         self.columns = 1
         self.columnSpace = 0.0
-        self.detailBands = ObservableListProxy([DetailBandModel()])
+        self.detailBands = ObservableListProxy()
+        self.add_band(DetailBandModel())
 
     def add_band(self, band):
         if not isinstance(band, BandModel):
