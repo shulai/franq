@@ -314,6 +314,10 @@ class MainWindow(QtGui.QMainWindow):
             action.triggered.connect(self.add_section)
 
         elif isinstance(element, SectionModel):
+
+            action = self._context_menu.addAction('Remove section')
+            action.triggered.connect(self.remove_section)
+
             action = self._context_menu.addAction('Add detail band')
             action.triggered.connect(self.add_section_detailband)
 
@@ -461,16 +465,16 @@ class MainWindow(QtGui.QMainWindow):
         self.model.add_section(section)
 
     def remove_section(self):
-        section = self.selected.parent
+        section = self.selected
         self.model.remove_section(section)
 
     def add_section_detailband(self):
-        section = self.selected.parent
+        section = self.selected
         band = DetailBandModel()
         section.add_band(band)
 
     def add_section_band(self):
-        section = self.selected.parent
+        section = self.selected
         band = BandModel('Band')
         section.add_band(band)
 
