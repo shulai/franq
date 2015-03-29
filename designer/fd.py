@@ -57,6 +57,7 @@ class MainWindow(QtGui.QMainWindow):
             self.scene.removeItem(self.view)
         self.view = ReportView(self.model)
         self.scene.addItem(self.view)
+        self.select_element(self.model)
         self.filename = None
         self.setWindowTitle('Franq Designer [New Report]')
 
@@ -71,6 +72,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.scene.removeItem(self.view)
             self.view = ReportView(self.model)
             self.scene.addItem(self.view)
+            self.select_element(self.model)
             self.filename = filename
             self.setWindowTitle('Franq Designer [{0}]'
                 .format(os.path.basename(self.filename)))
