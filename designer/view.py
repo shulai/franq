@@ -254,7 +254,7 @@ class SectionView(QtGui.QGraphicsRectItem):
     def add_child(self, child):
         child.setParentItem(self)
         child.setPos(0, self.height - self.SECTION_EXTRA_HEIGHT)
-        child.set_width(self.width)
+        child.set_width(self.children_width)
         self.children.append(child)
         self.height += child.height
         self.setRect(0, 0, self.width, self.height)
