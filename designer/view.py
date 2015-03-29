@@ -204,7 +204,7 @@ class SectionView(QtGui.QGraphicsRectItem):
         for detail_model in self.model.detailBands:
             detail = DetailBandView(detail_model)
             detail.setParentItem(self)
-            detail.setPos(0, 0)
+            detail.setPos(0, self.height - self.SECTION_EXTRA_HEIGHT)
             self.children.append(detail)
             self.height += detail.height
 
