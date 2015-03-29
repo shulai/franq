@@ -7,9 +7,6 @@ import franq
 mm = franq.mm
 
 
-#def load_font(f):
-#    return QFont(f['family'], f['size'], f['weight'], f['italic'])
-
 class CallGenerator:
 
     def __init__(self, name, *params):
@@ -55,8 +52,6 @@ class ElementModel(ObservableObject):
         # TODO: Load values if available
         self.pen = None
         self.background = None
-        if json.get('font'):
-            self.font = QFont(*json['font'])
 
     def save(self):
         json = {
@@ -81,10 +76,20 @@ class TextModel(ElementModel):
         self.height = 4 * mm
         self.expand = False
 
+    def load(self, json):
+        super().load(json)
+        if json.get('font'):
+            self.font = QFont(*json['font'])
+
     def save(self):
         json = super().save()
         json['expand'] = self.expand
-        json['font'] = self.font
+        if self.font:
+            json['font'] = (
+                self.font.family(),
+                self.font.pointSize(),
+                self.font.weight(),
+                self.font.italic())
         return json
 
     def _generator(self, name, *params):
@@ -267,6 +272,13 @@ class BandModel(ObservableObject):
             'font': self.font,
             'height': self.height
             }
+        if self.font:
+            json['font'] = (
+                self.font.family(),
+                self.font.pointSize(),
+                self.font.weight(),
+                self.font.italic())
+
         if hasattr(self, 'elements') and self.elements:
             json['elements'] = [e.save() for e in self.elements]
         return json
