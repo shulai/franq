@@ -337,6 +337,8 @@ class ReportView(QtGui.QGraphicsRectItem):
                 position -= 1
             self.add_child(view, position)
             self._element_map[section] = view
+        elif event_type == 'before_delitem':
+            self.remove_child(self._element_map[sections[event_data]])
 
     def update_size(self):
         printer = QtGui.QPrinter()

@@ -394,7 +394,7 @@ class ReportModel(ObservableObject):
         section.parent = self
 
     def remove_section(self, section):
-        self.section.remove(section)
+        self.sections.remove(section)
         section.parent = None
 
     def load(self, json):

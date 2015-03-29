@@ -467,6 +467,7 @@ class MainWindow(QtGui.QMainWindow):
     def remove_section(self):
         section = self.selected
         self.model.remove_section(section)
+        self.select_element(self.model)
 
     def add_section_detailband(self):
         section = self.selected
