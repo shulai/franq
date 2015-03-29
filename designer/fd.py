@@ -313,6 +313,13 @@ class MainWindow(QtGui.QMainWindow):
             action = self._context_menu.addAction('Add section')
             action.triggered.connect(self.add_section)
 
+        elif isinstance(element, SectionModel):
+            action = self._context_menu.addAction('Add detail band')
+            action.triggered.connect(self.add_section_detailband)
+
+            action = self._context_menu.addAction('Add regular band')
+            action.triggered.connect(self.add_section_band)
+
         elif isinstance(element, BandModel):
             if element.parent == self.model:
                 action = self._context_menu.addAction(
@@ -334,32 +341,26 @@ class MainWindow(QtGui.QMainWindow):
                     if not element.detailBegin:
                         action = self._context_menu.addAction(
                             'Add detail begin band')
-                        #action.triggered.connect(self.add_section_band)
+                        action.triggered.connect(self.add_detail_begin_band)
 
                     if not element.columnHeader:
                         action = self._context_menu.addAction(
                             'Add column header band')
-                        #action.triggered.connect(self.add_section_band)
+                        action.triggered.connect(self.add_detail_header_band)
 
                     if not element.columnFooter:
                         action = self._context_menu.addAction(
                             'Add column footer band')
+                        action.triggered.connect(self.add_detail_footer_band)
 
                     if not element.detailSummary:
                         action = self._context_menu.addAction(
                             'Add detail summary band')
-                        #action.triggered.connect(self.add_section_band)
+                        action.triggered.connect(self.add_detail_summary_band)
 
                 if not element.child:
                     action = self._context_menu.addAction('Add child band')
-                    #action.triggered.connect(self.add_child_band)
-
-                self._context_menu.addSeparator()
-                action = self._context_menu.addAction('Add detail band')
-                action.triggered.connect(self.add_section_detailband)
-
-                action = self._context_menu.addAction('Add regular band')
-                action.triggered.connect(self.add_section_band)
+                    action.triggered.connect(self.add_child_band)
 
             elif isinstance(element.parent, BandModel):
                 action = self._context_menu.addAction(
@@ -477,6 +478,36 @@ class MainWindow(QtGui.QMainWindow):
         section = self.selected.parent
         section.remove_band(band)
         self.select_element(section)
+
+    def add_detail_begin_band(self):
+        detail_band = self.selected
+        assert(detail_band.detailBegin is None)
+        band = BandModel('Detail Begin Band')
+        detail_band.detailBegin = band
+
+    def add_detail_header_band(self):
+        detail_band = self.selected
+        assert(detail_band.columnHeader is None)
+        band = BandModel('Detail Column Header')
+        detail_band.columnHeader = band
+
+    def add_detail_footer_band(self):
+        detail_band = self.selected
+        assert(detail_band.columnFooter is None)
+        band = BandModel('Detail Column Footer')
+        detail_band.columnFooter = band
+
+    def add_detail_summary_band(self):
+        detail_band = self.selected
+        assert(detail_band.detailSummary is None)
+        band = BandModel('Detail Summary Band')
+        detail_band.detailSummary = band
+
+    def add_child_band(self):
+        band = self.selected
+        assert(band.child is None)
+        child_band = BandModel('Child Band')
+        band.child = child_band
 
 
 class DesignerApp(QtGui.QApplication):
