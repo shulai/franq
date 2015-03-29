@@ -196,7 +196,7 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.model = model
 
         self.children = []
-        #self._element_map = {}
+        self._element_map = {}
 
         self.height = self.SECTION_EXTRA_HEIGHT
         self.width = 0.0
@@ -238,7 +238,9 @@ class SectionView(QtGui.QGraphicsRectItem):
             else:
                 print("Error! SectionModel.detailBands can't contain this")
             self.add_child(child)
-            #self._element_map[child.model] = child
+            self._element_map[child.model] = child
+        elif event_type == 'before_delitem':
+            self.remove_child(self._element_map[bands[event_data]])
 
     def child_size_updated(self, child):
         # Child (child models) updated height, propagate to parent
@@ -247,7 +249,7 @@ class SectionView(QtGui.QGraphicsRectItem):
         for child in self.children[i + 1:]:
             child.setPos(0, child_top)
             child_top += child.height
-        self.height = child_top
+        self.height = child_top + self.SECTION_EXTRA_HEIGHT
         self.setRect(0, 0, self.width, self.height)
         self.parentItem().child_size_updated(self)
 
@@ -258,7 +260,19 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.children.append(child)
         self.height += child.height
         self.setRect(0, 0, self.width, self.height)
+        self.parentItem().child_size_updated(self)
         return child
+
+    def remove_child(self, child):
+        position = self.children.index(child)
+        del self.children[position]
+        child.setParentItem(None)
+        self.scene().removeItem(child)
+        for other_child in self.children[position:]:
+            other_child.moveBy(0, -child.height)
+        self.height -= child.height
+        self.setRect(0, 0, self.width, self.height)
+        self.parentItem().child_size_updated(self)
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)

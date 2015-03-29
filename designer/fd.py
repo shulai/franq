@@ -480,7 +480,8 @@ class MainWindow(QtGui.QMainWindow):
         section.add_band(band)
 
     def remove_section_band(self):
-        section = self.selected.parent
+        band = self.selected
+        section = band.parent
         section.remove_band(band)
         self.select_element(section)
 
