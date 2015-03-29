@@ -164,7 +164,7 @@ class BandView(QtGui.QGraphicsRectItem):
         if event_type == 'update':
             if 'height' in attrs:
                 self.height = self.model.height
-                self.setRect(0, 0, self.boundingRect().width(),
+                self.setRect(0, 0, self.width,
                     self.height)
                 self.parentItem().child_size_updated(self)
 
@@ -186,6 +186,8 @@ class DetailBandView(BandView):
 
 class SectionView(QtGui.QGraphicsRectItem):
 
+    SECTION_EXTRA_HEIGHT = 10.0 * mm
+
     def __init__(self, model):
         super(SectionView, self).__init__()
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
@@ -194,14 +196,15 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.model = model
 
         self.children = []
+        #self._element_map = {}
 
-        self.height = 0.0
+        self.height = self.SECTION_EXTRA_HEIGHT
         self.width = 0.0
 
         for detail_model in self.model.detailBands:
             detail = DetailBandView(detail_model)
             detail.setParentItem(self)
-            detail.setPos(0, self.height)
+            detail.setPos(0, 0)
             self.children.append(detail)
             self.height += detail.height
 
@@ -211,6 +214,7 @@ class SectionView(QtGui.QGraphicsRectItem):
 
     def set_width(self, width):
         self.width = width
+        self.setRect(0, 0, self.width, self.height)
         self.update_children_width()
 
     def update_children_width(self):
@@ -234,7 +238,7 @@ class SectionView(QtGui.QGraphicsRectItem):
             else:
                 print("Error! SectionModel.detailBands can't contain this")
             self.add_child(child)
-            self._element_map[child.model] = child
+            #self._element_map[child.model] = child
 
     def child_size_updated(self, child):
         # Child (child models) updated height, propagate to parent
@@ -249,15 +253,19 @@ class SectionView(QtGui.QGraphicsRectItem):
 
     def add_child(self, child):
         child.setParentItem(self)
-        child.setPos(0, self.height)
+        child.setPos(0, self.height - self.SECTION_EXTRA_HEIGHT)
         child.set_width(self.width)
         self.children.append(child)
         self.height += child.height
+        self.setRect(0, 0, self.width, self.height)
         return child
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
         draw_grid(painter, self.rect())
+        painter.setFont(DESC_FONT)
+        painter.setPen(GRAY)
+        painter.drawText(0, self.height - 10, 'Section')
 
 
 class ReportView(QtGui.QGraphicsRectItem):
