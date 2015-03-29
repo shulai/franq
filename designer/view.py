@@ -118,8 +118,11 @@ class BandView(QtGui.QGraphicsRectItem):
         self.model.add_callback(self.observe_model)
         self.model.elements.add_callback(self.observe_model_elements)
         self.height = self.model.height
+        if self.model.child:
+            self.height += self.model.child.height
 
         self._children = []
+        self._band_children = []
         self._element_map = {}
         for element in self.model.elements:
             self._add_child(element, -1)
@@ -149,6 +152,57 @@ class BandView(QtGui.QGraphicsRectItem):
         self.scene().removeItem(child)
         del self._element_map[child.model]
 
+    def _add_band_child(self, child, position=None):
+        child.setParentItem(self)
+
+        if position is None:
+            if self._band_children:
+                child_top = (self._band_children[-1].pos().y()
+                    + self._band_children[-1].height)
+            else:
+                child_top = self.model.height
+            child.setPos(0, child_top)
+            child.set_width(self.width)
+            self._band_children.append(child)
+        else:
+            if position == 0:
+                child_top = self.model.height
+            else:
+                child_top = (self._band_children[position - 1].pos().y()
+                    + self._band_children[position - 1].height)
+            child.setPos(0, child_top)
+            child.set_width(self.width)
+            self._band_children.insert(position, child)
+            for other_child in self._band_children[position + 1:]:
+                other_child.moveBy(0, child.height)
+
+        self.height += child.height
+        self.setRect(0, 0, self.width, self.height)
+        self.parentItem().child_size_updated(self)
+        return child
+
+    def _remove_band_child(self, child):
+        position = self._band_children.index(child)
+        del self._band_children[position]
+        child.setParentItem(None)
+        self.scene().removeItem(child)
+        for other_child in self._band_children[position:]:
+            other_child.moveBy(0, -child.height)
+        self.height -= child.height
+        self.setRect(0, 0, self.width, self.height)
+        self.parentItem().child_size_updated(self)
+
+    def child_size_updated(self, child):
+        # Child (child models) updated height, propagate to parent
+        child_top = child.mapRectToParent(child.boundingRect()).bottom()
+        i = self._band_children.index(child)
+        for child in self.children[i + 1:]:
+            child.setPos(0, child_top)
+            child_top += child.height
+        self.height = child_top
+        self.setRect(0, 0, self.width, self.height)
+        self.parentItem().child_size_updated(self)
+
     def set_width(self, width):
         self.width = width
         self.setRect(0, 0, self.width, self.height)
@@ -158,15 +212,24 @@ class BandView(QtGui.QGraphicsRectItem):
         draw_grid(painter, self.rect())
         painter.setFont(DESC_FONT)
         painter.setPen(GRAY)
-        painter.drawText(0, self.height - 10, self.model.description)
+        painter.drawText(0, self.model.height - 10, self.model.description)
 
-    def observe_model(self, sender, event_type, _, attrs):
+    def observe_model(self, model, event_type, _, attrs):
+        print(event_type, attrs)
         if event_type == 'update':
             if 'height' in attrs:
                 self.height = self.model.height
                 self.setRect(0, 0, self.width,
                     self.height)
                 self.parentItem().child_size_updated(self)
+            elif 'child' in attrs and model.child is not None:
+                print('agrego child')
+                child = BandView(model.child)
+                self._add_band_child(child)
+                self._element_map[child.model] = child
+        elif event_type == 'before_update':
+            if 'child' in attrs and model.child is not None:
+                self._remove_band_child(self._element_map[model.child])
 
     def observe_model_elements(self, elements, event_type, _, event_data):
         if event_type == 'append':
@@ -181,7 +244,16 @@ class BandView(QtGui.QGraphicsRectItem):
 
 class DetailBandView(BandView):
 
-    pass
+    def __init__(self, model):
+        super().__init__(model)
+        if self.model.columnHeader:
+            self.height += self.model.columnHeader.height
+        if self.model.columnFooter:
+            self.height += self.model.columnFooter.height
+        if self.model.detailBegin:
+            self.height += self.model.detailBegin.height
+        if self.model.detailSummary:
+            self.height += self.model.detailSummary.height
 
 
 class SectionView(QtGui.QGraphicsRectItem):
@@ -397,7 +469,7 @@ class ReportView(QtGui.QGraphicsRectItem):
                 child_top = self.model.margins[0]
             else:
                 child_top = (self.children[position - 1].pos().y()
-                    + self.children[-1].height)
+                    + self.children[position - 1].height)
             child.setPos(self.children_left, child_top)
             child.set_width(self.children_width)
             self.children.insert(position, child)

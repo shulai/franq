@@ -222,7 +222,8 @@ element_classes = {
 
 class BandModel(ObservableObject):
 
-    _notifiables_ = ('description', 'height', 'pen', 'background', 'font')
+    _notifiables_ = ('description', 'height', 'pen', 'background', 'font',
+        'child')
 
     def __init__(self, description):
         super(BandModel, self).__init__()
@@ -244,6 +245,20 @@ class BandModel(ObservableObject):
     def remove_element(self, element):
         self.elements.remove(element)
         element.parent = None
+
+    def _add_band(self, band_attr, band):
+        setattr(self, band_attr, band)
+        band.parent = self
+
+    def add_band(self, band_attr, band):
+        if band_attr != 'child':
+            raise ValueError('Invalid band_attr')
+        self._add_band(band_attr, band)
+
+    def remove_band(self, band_attr):
+        band = getattr(self, band_attr)
+        band.parent = None
+        setattr(self, band_attr, None)
 
     def load(self, json):
 
@@ -296,6 +311,9 @@ class BandModel(ObservableObject):
 
 class DetailBandModel(BandModel):
 
+    _notifiables_ = BandModel._notifiables_ + (
+        'columnHeader', 'columnFooter', 'detailBegin', 'detailSummary')
+
     def __init__(self):
         super().__init__('Detail Band')
         self.dataSet = None
@@ -303,6 +321,12 @@ class DetailBandModel(BandModel):
         self.columnFooter = None
         self.detailBegin = None
         self.detailSummary = None
+
+    def add_band(self, band_attr, band):
+        if band_attr not in ('child', 'columnHeader', 'columnFooter',
+                'detailBegin', 'detailSummary'):
+            raise ValueError('Invalid band_attr')
+        self._add_band(band_attr, band)
 
     def load(self, json):
         super().load(json)
@@ -380,7 +404,7 @@ class ReportModel(ObservableObject):
 
     def add_band(self, band_attr, band):
         if band_attr not in ('begin', 'summary', 'header', 'footer'):
-            raise ValueError('Invand band_attr')
+            raise ValueError('Invalid band_attr')
         setattr(self, band_attr, band)
         band.parent = self
 
