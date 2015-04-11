@@ -940,6 +940,8 @@ class Image(Element):
         if not self.pixmap:
             if self.fileName:
                 self.pixmap = QPixmap(self.fileName)
+            else:
+                return
 
         painter.drawPixmap(
             QRectF(self.left + rect.left(), self.top + rect.top(),
