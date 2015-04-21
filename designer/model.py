@@ -280,6 +280,11 @@ class BandModel(ObservableObject):
             self.elements = ObservableListProxy(
                 [element(e) for e in json['elements']])
 
+        if json.get('child'):
+            band = BandModel('Child Band')
+            band.load(json['child'])
+            self.add_band('child', band)
+
     def save(self):
         # TODO
         json = {
@@ -296,6 +301,10 @@ class BandModel(ObservableObject):
 
         if hasattr(self, 'elements') and self.elements:
             json['elements'] = [e.save() for e in self.elements]
+
+        if self.child:
+            json['child'] = self.child.save()
+
         return json
 
     def generate(self):
