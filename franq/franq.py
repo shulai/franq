@@ -431,7 +431,7 @@ class ReportRenderer(object):
                                 getattr(dataItem, subdetail.dataSet))
                         else:
                             self._renderBandColumnWide(subdetail, dataItem,
-                                False)
+                                True)
 
                     dataItem = ds.nextDataItem()
 
