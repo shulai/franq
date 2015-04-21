@@ -345,13 +345,21 @@ class ReportRenderer(object):
             self._renderBandPageWide(self._report.summary, dataItem, False)
 
     def _printColumnHeader(self, detailBand, dataItem):
-        if detailBand.columnHeader is not None:
-            self._renderBandColumnWide(detailBand.columnHeader, dataItem, False)
+        try:
+            if detailBand.columnHeader is not None:
+                self._renderBandColumnWide(detailBand.columnHeader, dataItem,
+                    False)
+        except AttributeError:  # detailBand is a regular band
+            pass
 
     def _printColumnFooter(self, detailBand, dataItem):
-        if detailBand.columnFooter is not None:
-            self.__y = self.__detailBottom
-            self._renderBandColumnWide(detailBand.columnFooter, dataItem, False)
+        try:
+            if detailBand.columnFooter is not None:
+                self.__y = self.__detailBottom
+                self._renderBandColumnWide(detailBand.columnFooter, dataItem,
+                    False)
+        except AttributeError:  # detailBand is a regular band
+            pass
 
     def _printDetailBegin(self, detailBand, dataItem):
         if detailBand.begin:
@@ -430,6 +438,7 @@ class ReportRenderer(object):
                             self._renderDetailBand(subdetail,
                                 getattr(dataItem, subdetail.dataSet))
                         else:
+                            self._currentDetailBand = subdetail
                             self._renderBandColumnWide(subdetail, dataItem,
                                 True)
 
@@ -473,7 +482,8 @@ class ReportRenderer(object):
                     dataItem = ds.getDataItem()
                 except (KeyError, DataSourceExausted):
                     dataItem = None
-                self._renderBandColumnWide(band, dataItem, False)
+                self._currentDetailBand = band
+                self._renderBandColumnWide(band, dataItem, True)
 
     def render(self, printer, dataSources):
         rpt = self._report
