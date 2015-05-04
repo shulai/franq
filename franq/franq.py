@@ -439,6 +439,8 @@ class ReportRenderer(object):
                                 getattr(dataItem, subdetail.dataSet))
                         else:
                             self._currentDetailBand = subdetail
+                            self.__detailBottom = (
+                                self.__pageHeight - self.__footerHeight)
                             self._renderBandColumnWide(subdetail, dataItem,
                                 True)
 
@@ -483,6 +485,7 @@ class ReportRenderer(object):
                 except (KeyError, DataSourceExausted):
                     dataItem = None
                 self._currentDetailBand = band
+                self.__detailBottom = self.__pageHeight - self.__footerHeight
                 self._renderBandColumnWide(band, dataItem, True)
 
     def render(self, printer, dataSources):
