@@ -853,7 +853,7 @@ class Field(TextElement):
             v = self._get_value(data_item)
             if v is None:
                 v = ''
-            return v
+            return str(v)
 
 
 class Function(TextElement):
