@@ -19,8 +19,6 @@
 import sip
 sip.setapi("QString", 2)
 
-import functools
-
 from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
 from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
     QTextDocument, QFontMetricsF)
@@ -455,6 +453,7 @@ class ReportRenderer(object):
                         if group.footer:
                             self._renderBandColumnWide(group.footer,
                                 ds.getPrevDataItem(), True)
+                        group.on_new_group()
 
         except DataSourceExausted:
             pass  # Out of loop
@@ -664,18 +663,26 @@ class DetailGroup(object):
         * expression: callable, usually a lambda. Default None.
         * header: Group header band, useful for titles, default None.
         * footer: Group footer band, useful for summaries, default None.
+
+        Events
+        ------
+        * on_new_group: callable (event handler), default None
     """
     expression = None
     header = None
     footer = None
+    on_new_group = None
 
-    def __init__(self, expression=None, header=None, footer=None):
+    def __init__(self, expression=None, header=None, footer=None,
+            on_new_group=None):
         if expression:
             self.expression = expression
         if header:
             self.header = header
         if footer:
             self.footer = footer
+        if on_new_group:
+            self.on_new_group = on_new_group
         self.value = None
 
 
