@@ -453,7 +453,8 @@ class ReportRenderer(object):
                         if group.footer:
                             self._renderBandColumnWide(group.footer,
                                 ds.getPrevDataItem(), True)
-                        group.on_new_group()
+                        if group.on_new_group is not None:
+                            group.on_new_group()
 
         except DataSourceExausted:
             pass  # Out of loop
