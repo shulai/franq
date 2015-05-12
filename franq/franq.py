@@ -815,6 +815,12 @@ class Label(TextElement):
     def _text(self, data_item):
         return self.text
 
+class FranqAttributeError(AttributeError):
+    pass
+
+class FranqFormatterError(Exception):
+    pass
+
 
 class Field(TextElement):
     """
@@ -847,18 +853,23 @@ class Field(TextElement):
                 prop = propertyparts.pop(0)
             value = getattr(obj, prop)
         except AttributeError:
-            #warn("Attribute {} ({}) not found in the model {}({})".format(
-            #    self.attrName, prop, data_item, type(data_item)))
-            value = '<Error>'
+            raise FranqAttributeError("Attribute {} ({}) not found"
+                " in the model {}({})"
+                .format(self.attrName, prop, data_item, type(data_item)))
         return value
 
     def _text(self, data_item):
+        v = self._get_value(data_item)
         if self.formatter:
-            return self.formatter(self._get_value(data_item))
+            try:
+                return self.formatter(v)
+            except (TypeError, ValueError):
+                raise FranqFormatterError("Can't format value \"{}\""
+                    " from attribute {} with formatter {}"
+                    .format(v, self.attrName, self.formatter.__name__))
         elif self.formatStr:
-            return self.formatStr.format(self._get_value(data_item))
+            return self.formatStr.format(v)
         else:
-            v = self._get_value(data_item)
             if v is None:
                 v = ''
             return str(v)
