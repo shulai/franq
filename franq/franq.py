@@ -357,9 +357,11 @@ class ReportRenderer(object):
                 height = detailBand.columnHeader.renderHeight(self.__painter,
                     dataItem)
                 if self.__y + height > self.__detailBottom:
-                    # recursively calls _printColumnHeader
+                    # recursively calls _printColumnHeader and do the
+                    # actual band rendering falling by the else clause
                     self._continueInNewColumn(dataItem)
                 else:
+                    # Not at the end, render normally
                     self._renderBandColumnWide(detailBand.columnHeader,
                         dataItem, False)
         except AttributeError:  # detailBand is a regular band
