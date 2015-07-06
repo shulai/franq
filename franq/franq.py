@@ -345,8 +345,23 @@ class ReportRenderer(object):
     def _printColumnHeader(self, detailBand, dataItem):
         try:
             if detailBand.columnHeader is not None:
-                self._renderBandColumnWide(detailBand.columnHeader, dataItem,
-                    False)
+
+                # Check for new column here, if done in _renderBandColumnWide
+                # the header will print twice
+                try:
+                    ds = self._dataSources[detailBand.columnHeader.dataSet]
+                    dataItem = ds.getDataItem()
+                except KeyError:
+                    pass
+
+                height = detailBand.columnHeader.renderHeight(self.__painter,
+                    dataItem)
+                if self.__y + height > self.__detailBottom:
+                    # recursively calls _printColumnHeader
+                    self._continueInNewColumn(dataItem)
+                else:
+                    self._renderBandColumnWide(detailBand.columnHeader,
+                        dataItem, False)
         except AttributeError:  # detailBand is a regular band
             pass
 
