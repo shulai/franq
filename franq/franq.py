@@ -291,7 +291,7 @@ class ReportRenderer(object):
             pass
         height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
-            self._continueInNewPage(dataItem)
+            self._newPage(dataItem)
         rect = QRectF(0.0, self.__y, self.__pageWidth, height)
         if band.render(self.__painter, rect, dataItem):
             self.__y += height
