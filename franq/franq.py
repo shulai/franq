@@ -340,7 +340,7 @@ class ReportRenderer(object):
 
     def _printSummary(self, dataItem):
         if self._report.summary is not None:
-            self._renderBandPageWide(self._report.summary, dataItem, False)
+            self._renderBandPageWide(self._report.summary, dataItem, True)
 
     def _printColumnHeader(self, detailBand, dataItem):
         try:
