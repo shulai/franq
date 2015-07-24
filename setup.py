@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='franq',
-    version='0.9.8',
+    version='0.9.9',
     description="PyQt-based reporting framework",
     author="Julio Cesar Gazquez",
     author_email='julio@mebamutual.com.ar',
