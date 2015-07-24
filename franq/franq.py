@@ -590,7 +590,7 @@ class Band(BaseElement):
             height to accomodate elements if necessary
     """
     height = 20 * mm
-    elements = []
+    elements = None
     child = None
     forceNewPage = False
     forceNewPageAfter = False
@@ -598,6 +598,11 @@ class Band(BaseElement):
     expand = False
     dataSet = None
     renderBand = True
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        if self.elements is None:
+            self.elements = []
 
     def _bandRenderHeight(self, painter, data_item=None):
         height = self.height
