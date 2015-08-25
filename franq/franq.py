@@ -606,11 +606,13 @@ class Band(BaseElement):
 
     def _bandRenderHeight(self, painter, data_item=None):
         height = self.height
-        for element in self.elements:
-            elementBottom = element.top + element.renderHeight(painter,
-                data_item)
-            if elementBottom > height:
-                height = elementBottom
+        if self.expand:
+            self.renderSetup(painter)  # Set font
+            for element in self.elements:
+                elementBottom = element.top + element.renderHeight(painter,
+                    data_item)
+                if elementBottom > height:
+                    height = elementBottom
         return height
 
     def renderHeight(self, painter, data_item=None):
@@ -763,13 +765,14 @@ class TextElement(Element):
     def _expandHeight(self, painter, text):
         if self.richText:
             doc = QTextDocument()
-            doc.setDefaultFont(painter.font())
+            font = self.font or painter.font()
+            doc.setDefaultFont(font)
             doc.setTextWidth(self.width)
             doc.setHtml(text)
-            print('rich text height', doc.size().height())
             return max(self.height, doc.size().height())
         else:
-            fm = QFontMetricsF(painter.font())
+            font = self.font or painter.font()
+            fm = QFontMetricsF(font)
             bound_rect = fm.boundingRect(
                 QRectF(self.left, self.top, self.width, self.height),
                 self.textOptions.flags() | Qt.TextWordWrap,
