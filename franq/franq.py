@@ -19,9 +19,15 @@
 import sip
 sip.setapi("QString", 2)
 
-from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
-from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
-    QTextDocument, QFontMetricsF)
+if PYQT_VERSION == 5:
+    from PyQt5.QtCore import QPointF, QRectF, QSizeF, Qt
+    from PyQt5.QtGui import (QPainter, QTextOption, QPixmap, QColor,
+        QTextDocument, QFontMetricsF)
+    from PyQt5.QtPrintSupport import QPrinter
+else:
+    from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
+    from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
+        QTextDocument, QFontMetricsF)
 
 inch = 300
 mm = 300 / 25.4
