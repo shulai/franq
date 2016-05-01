@@ -32,7 +32,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>31</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -199,6 +199,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionSnap_to_grid"/>
    <addaction name="actionAlign_Top"/>
    <addaction name="actionAlign_Middle"/>
    <addaction name="actionAlign_Bottom"/>
@@ -330,7 +331,9 @@
   </action>
   <action name="actionSelect">
    <property name="icon">
-    <iconset theme="edit-select"/>
+    <iconset theme="edit-select">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Select</string>
@@ -438,6 +441,14 @@
   <action name="action_Generate">
    <property name="text">
     <string>&amp;Generate...</string>
+   </property>
+  </action>
+  <action name="actionSnap_to_grid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Snap to grid</string>
    </property>
   </action>
  </widget>
