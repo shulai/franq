@@ -118,14 +118,16 @@ class BandView(QtGui.QGraphicsRectItem):
         self.model.add_callback(self.observe_model)
         self.model.elements.add_callback(self.observe_model_elements)
         self.height = self.model.height
-        if self.model.child:
-            self.height += self.model.child.height
+        self.width = 0.0
 
         self._children = []
         self._band_children = []
         self._element_map = {}
         for element in self.model.elements:
             self._add_child(element, -1)
+        if self.model.child:
+            child = BandView(model.child)
+            self._add_band_child(child)
 
     def _add_child(self, element, pos):
         class_ = {
@@ -177,8 +179,12 @@ class BandView(QtGui.QGraphicsRectItem):
                 other_child.moveBy(0, child.height)
 
         self.height += child.height
-        self.setRect(0, 0, self.width, self.height)
+        self.setRect(0, 0, self.width, self.model.height)
+        #try:
         self.parentItem().child_size_updated(self)
+        #except AttributeError:
+        #    pass
+        self._element_map[child.model] = child
         return child
 
     def _remove_band_child(self, child):
@@ -189,8 +195,9 @@ class BandView(QtGui.QGraphicsRectItem):
         for other_child in self._band_children[position:]:
             other_child.moveBy(0, -child.height)
         self.height -= child.height
-        self.setRect(0, 0, self.width, self.height)
+        self.setRect(0, 0, self.width, self.model.height)
         self.parentItem().child_size_updated(self)
+        del self._element_map[child.model]
 
     def child_size_updated(self, child):
         # Child (child models) updated height, propagate to parent
@@ -200,12 +207,14 @@ class BandView(QtGui.QGraphicsRectItem):
             child.setPos(0, child_top)
             child_top += child.height
         self.height = child_top
-        self.setRect(0, 0, self.width, self.height)
+        self.setRect(0, 0, self.width, self.model.height)
         self.parentItem().child_size_updated(self)
 
     def set_width(self, width):
         self.width = width
-        self.setRect(0, 0, self.width, self.height)
+        self.setRect(0, 0, self.width, self.model.height)
+        for band in self._band_children:
+            band.set_width(self.width)
 
     def paint(self, painter, option, widget):
         super(BandView, self).paint(painter, option, widget)
@@ -215,19 +224,19 @@ class BandView(QtGui.QGraphicsRectItem):
         painter.drawText(0, self.model.height - 10, self.model.description)
 
     def observe_model(self, model, event_type, _, attrs):
-        print(event_type, attrs)
         if event_type == 'update':
             if 'height' in attrs:
-                self.height = self.model.height
+                self.height += self.model.height
                 self.setRect(0, 0, self.width,
-                    self.height)
+                    self.model.height)
                 self.parentItem().child_size_updated(self)
             elif 'child' in attrs and model.child is not None:
-                print('agrego child')
                 child = BandView(model.child)
                 self._add_band_child(child)
-                self._element_map[child.model] = child
         elif event_type == 'before_update':
+            if 'height' in attrs:
+                # Substract old value before adding new value
+                self.height -= self.model.height
             if 'child' in attrs and model.child is not None:
                 self._remove_band_child(self._element_map[model.child])
 
@@ -310,7 +319,6 @@ class SectionView(QtGui.QGraphicsRectItem):
             else:
                 print("Error! SectionModel.detailBands can't contain this")
             self.add_child(child)
-            self._element_map[child.model] = child
         elif event_type == 'before_delitem':
             self.remove_child(self._element_map[bands[event_data]])
 
@@ -333,6 +341,7 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.height += child.height
         self.setRect(0, 0, self.width, self.height)
         self.parentItem().child_size_updated(self)
+        self._element_map[child.model] = child
         return child
 
     def remove_child(self, child):
@@ -345,6 +354,7 @@ class SectionView(QtGui.QGraphicsRectItem):
         self.height -= child.height
         self.setRect(0, 0, self.width, self.height)
         self.parentItem().child_size_updated(self)
+        del self._element_map[child.model]
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
@@ -386,22 +396,18 @@ class ReportView(QtGui.QGraphicsRectItem):
             if 'begin' in attrs and model.begin is not None:
                 view = BandView(model.begin)
                 self.add_child(view, 0)
-                self._element_map[model.begin] = view
             elif 'header' in attrs and model.header is not None:
                 view = BandView(model.header)
                 position = 1 if model.begin else 0
                 self.add_child(view, position)
-                self._element_map[model.header] = view
             elif 'footer' in attrs and model.footer is not None:
                 view = BandView(model.footer)
                 position = (len(self.children) - 1
                     if self.model.summary else None)
                 self.add_child(view, position)
-                self._element_map[model.footer] = view
             elif 'summary' in attrs and model.summary is not None:
                 view = BandView(model.summary)
                 self.add_child(view, None)
-                self._element_map[model.summary] = view
         elif event_type == 'before_update':
             if 'begin' in attrs and model.begin is not None:
                 self.remove_child(self._element_map[model.begin])
@@ -476,6 +482,8 @@ class ReportView(QtGui.QGraphicsRectItem):
             for other_child in self.children[position + 1:]:
                 other_child.moveBy(0, child.height)
 
+        self._element_map[child.model] = child
+
     def remove_child(self, child):
         position = self.children.index(child)
         child.parent = None
@@ -484,6 +492,7 @@ class ReportView(QtGui.QGraphicsRectItem):
         self.scene().removeItem(child)
         for other_child in self.children[position:]:
             other_child.moveBy(0, -child.height)
+        del self._element_map[child.model]
 
     def paint(self, painter, option, widget):
         super(ReportView, self).paint(painter, option, widget)
