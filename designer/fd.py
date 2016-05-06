@@ -43,12 +43,17 @@ class MainWindow(QtGui.QMainWindow):
 
         self.ui.graphicsView.mousePressEvent = mousePressEvent
         self.ui.graphicsView.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.ui.graphicsView.customContextMenuRequested.connect(self.showContextMenu)
+        self.ui.graphicsView.customContextMenuRequested.connect(
+            self.showContextMenu)
         self.model = None
         self.view = None
         #self.view_map = {}
         self.selected = None
         self.mode = 'select'
+        from franq import mm
+        self.grid_x_spacing = 10 * mm
+        self.grid_y_spacing = 10 * mm
+        self.snap_to_grid = False
         self._context_menu = QtGui.QMenu()
 
     def new_report(self):
@@ -178,6 +183,10 @@ class MainWindow(QtGui.QMainWindow):
             'add_field': self.add_field,
             'add_function': self.add_function
             }[self.mode]()
+
+    @pyqtSlot()
+    def on_actionSnap_to_grid_triggered(self):
+        self.snap_to_grid = not self.snap_to_grid
 
     @pyqtSlot()
     def on_actionAlign_Top_triggered(self):
@@ -413,6 +422,11 @@ class MainWindow(QtGui.QMainWindow):
         el_pos = view_item.mapFromScene(cursor_scene_pos)
         element.left = el_pos.x()
         element.top = el_pos.y()
+        if self.snap_to_grid:
+            element.left = ((element.left + self.grid_x_spacing // 2)
+                // self.grid_x_spacing * self.grid_x_spacing)
+            element.top = ((element.top + self.grid_y_spacing // 2)
+                // self.grid_y_spacing * self.grid_y_spacing)
 
         band.add_element(element)
 
