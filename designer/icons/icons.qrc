@@ -1,0 +1,10 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>add_box.png</file>
+    <file>add_image.png</file>
+    <file>add_field.png</file>
+    <file>add_line.png</file>
+    <file>add_function.png</file>
+    <file>add_label.png</file>
+  </qresource>
+</RCC>
