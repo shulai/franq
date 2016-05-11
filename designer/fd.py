@@ -50,14 +50,13 @@ class MainWindow(QtGui.QMainWindow):
         #self.view_map = {}
         self.selected = None
         self.mode = 'select'
-        from franq import mm
-        self.grid_x_spacing = 10 * mm
-        self.grid_y_spacing = 10 * mm
-        self.snap_to_grid = False
         self._context_menu = QtGui.QMenu()
 
     def new_report(self):
         self.model = ReportModel()
+        self.model.add_callback(self.observe_model)
+        grid.x_spacing = self.model.grid_x_spacing
+        grid.y_spacing = self.model.grid_y_spacing
         if self.view:
             self.scene.removeItem(self.view)
         self.view = ReportView(self.model)
@@ -71,8 +70,10 @@ class MainWindow(QtGui.QMainWindow):
             new_model = ReportModel()
             with open(filename) as report_file:
                 new_model.load(json.load(report_file))
-
             self.model = new_model
+            grid.x_spacing = self.model.grid_x_spacing
+            grid.y_spacing = self.model.grid_y_spacing
+            self.model.add_callback(self.observe_model)
             if self.view:
                 self.scene.removeItem(self.view)
             self.view = ReportView(self.model)
@@ -100,6 +101,13 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.graphicsView.scale(
             self.physicalDpiX() / 300.0 * self.scale / 100.0,
             self.physicalDpiY() / 300.0 * self.scale / 100.0)
+
+    def observe_model(self, model, event_type, _, attrs):
+        if event_type == 'update' and attrs[0] in (
+                'grid_x_spacing', 'grid_y_spacing'):
+            grid.x_spacing = model.grid_x_spacing
+            grid.y_spacing = model.grid_y_spacing
+            self.view.update()
 
     @pyqtSlot()
     def on_action_New_triggered(self):
@@ -186,7 +194,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @pyqtSlot()
     def on_actionSnap_to_grid_triggered(self):
-        self.snap_to_grid = not self.snap_to_grid
+        grid.snap_to_grid = not grid.snap_to_grid
 
     @pyqtSlot()
     def on_actionAlign_Top_triggered(self):
@@ -422,12 +430,8 @@ class MainWindow(QtGui.QMainWindow):
         el_pos = view_item.mapFromScene(cursor_scene_pos)
         element.left = el_pos.x()
         element.top = el_pos.y()
-        if self.snap_to_grid:
-            element.left = ((element.left + self.grid_x_spacing // 2)
-                // self.grid_x_spacing * self.grid_x_spacing)
-            element.top = ((element.top + self.grid_y_spacing // 2)
-                // self.grid_y_spacing * self.grid_y_spacing)
-
+        if grid.snap_to_grid:
+            grid.snap(element)
         band.add_element(element)
 
         self.select_element(element)

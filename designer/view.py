@@ -15,23 +15,37 @@ DESC_FONT = QtGui.QFont('Helvetica', 6 * 300 / 72)
 GRID_PEN = QtGui.QPen(Qt.DotLine)
 GRID_PEN.setColor(BLUE)
 
-grid_size = 10.0 * mm  # FIXME: Configurable grid
+
+class Grid:
+
+    def __init__(self):
+        self.x_spacing = 10 * mm
+        self.y_spacing = 10 * mm
+        self.snap_to_grid = False
+
+    def draw(self, painter, rect):
+        # Draw grid
+        painter.setPen(GRID_PEN)
+        left, right = rect.left(), rect.right()
+        top, bottom = rect.top(), rect.bottom()
+
+        x = left
+        while x < right:
+            painter.drawLine(QtCore.QLineF(x, top, x, bottom))
+            x += self.x_spacing
+        y = top
+        while y < bottom:
+            painter.drawLine(QtCore.QLineF(left, y, right, y))
+            y += self.y_spacing
+
+    def snap(self, element):
+        element.left = ((element.left + self.x_spacing // 2)
+            // self.x_spacing * self.x_spacing)
+        element.top = ((element.top + self.y_spacing // 2)
+            // self.y_spacing * self.y_spacing)
 
 
-def draw_grid(painter, rect):
-    # Draw grid
-    painter.setPen(GRID_PEN)
-    left, right = rect.left(), rect.right()
-    top, bottom = rect.top(), rect.bottom()
-
-    x = left
-    while x < right:
-        painter.drawLine(QtCore.QLineF(x, top, x, bottom))
-        x += grid_size
-    y = top
-    while y < bottom:
-        painter.drawLine(QtCore.QLineF(left, y, right, y))
-        y += grid_size
+grid = Grid()
 
 
 class ElementView(QtGui.QGraphicsRectItem):
@@ -51,6 +65,10 @@ class ElementView(QtGui.QGraphicsRectItem):
             # TODO: Restrict to parent
             self.model.left = value.x()
             self.model.top = value.y()
+
+        if grid.snap_to_grid:
+            grid.snap(self.model)
+
         # http://python.6.x6.nabble.com/
         # setapi-and-itemChange-setParentItem-related-bug-td4984797.html
         if isinstance(value, QtGui.QGraphicsItem):
@@ -218,7 +236,7 @@ class BandView(QtGui.QGraphicsRectItem):
 
     def paint(self, painter, option, widget):
         super(BandView, self).paint(painter, option, widget)
-        draw_grid(painter, self.rect())
+        grid.draw(painter, self.rect())
         painter.setFont(DESC_FONT)
         painter.setPen(GRAY)
         painter.drawText(0, self.model.height - 10, self.model.description)
@@ -358,7 +376,7 @@ class SectionView(QtGui.QGraphicsRectItem):
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
-        draw_grid(painter, self.rect())
+        grid.draw(painter, self.rect())
         painter.setFont(DESC_FONT)
         painter.setPen(GRAY)
         painter.drawText(0, self.height - 10, 'Section')
@@ -497,7 +515,7 @@ class ReportView(QtGui.QGraphicsRectItem):
     def paint(self, painter, option, widget):
         super(ReportView, self).paint(painter, option, widget)
 
-        draw_grid(painter, self.rect())
+        grid.draw(painter, self.rect())
 
         # Draw margins
         painter.setPen(self.margin_pen)
