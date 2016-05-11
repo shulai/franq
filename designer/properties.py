@@ -131,6 +131,19 @@ class FontProperty(Property):
                 ' italic' if v.italic() else '') if v else "(Parent's)"
 
 
+class AlignmentProperty(Property):
+    """
+    FIXME
+    """
+    _values = ['Left', 'Right', 'Center', 'Justify']
+
+    def __init__(self, propertyName):
+        super().__init__(propertyName)
+        self.delegate = ComboBoxDelegate(
+            model=ValueListAdapter(self._values),
+            allowEmpty=False)
+
+
 class PropertyTable(QAbstractTableModel):
 
     def __init__(self, *properties):
@@ -213,7 +226,9 @@ property_tables = {
         MarginsProperty('margins'),
         Property('name'),
         PaperSizeProperty('paperSize'),
-        Property('title')),
+        Property('title'),
+        DimensionProperty('grid_x_spacing'),
+        DimensionProperty('grid_y_spacing')),
 
     model.SectionModel: PropertyTable(
         Property('columns'),
@@ -231,6 +246,7 @@ property_tables = {
         DimensionProperty('height')),
 
     model.LabelModel: PropertyTable(
+        AlignmentProperty('alignmnent'),
         BooleanProperty('expand'),
         FontProperty('font'),
         DimensionProperty('height'),
@@ -240,6 +256,7 @@ property_tables = {
         DimensionProperty('width')),
 
     model.FieldModel: PropertyTable(
+        AlignmentProperty('alignmnent'),
         Property('attrName'),
         BooleanProperty('expand'),
         FontProperty('font'),
@@ -249,6 +266,7 @@ property_tables = {
         DimensionProperty('width')),
 
     model.FunctionModel: PropertyTable(
+        AlignmentProperty('alignmnent'),
         BooleanProperty('expand'),
         FontProperty('font'),
         Property('func'),

@@ -75,11 +75,14 @@ class TextModel(ElementModel):
         self.width = 20 * mm
         self.height = 4 * mm
         self.expand = False
+        self.alignment = False
 
     def load(self, json):
         super().load(json)
         if json.get('font'):
             self.font = QFont(*json['font'])
+        if json.get('alignment'):
+            self.alignment = json['alignment']
 
     def save(self):
         json = super().save()
@@ -100,6 +103,15 @@ class TextModel(ElementModel):
             ('height', str(self.height)),
             *params
             )
+        if self.alignment:
+            options = (
+                {
+                    'Left': 'Qt::AlignLeft',
+                    'Center': 'Qt::AlignCenter',
+                    'Right': 'Qt::AlignRight',
+                    'Justify': 'Qt::AlignJustify',
+                }[self.alignment])
+            gen.param('textOptions', 'QTextOption(' + options + ')')
         if self.font:
             gen.param_font(self.font)
         return gen
