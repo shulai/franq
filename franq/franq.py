@@ -258,6 +258,11 @@ class DataSource:
         return self._item
 
 
+class LastPageReached(Exception):
+    """ Exception class used to finish rendering if last page selected is reached """
+    pass
+
+
 class ReportRenderer(object):
 
     def __init__(self, report):
@@ -279,7 +284,10 @@ class ReportRenderer(object):
                 and self.__y < self.__pageHeight - self.__footerHeight):
             self._printPageFooter(dataItem)
 
-        self.__printer.newPage()
+        if self.__lastPage and self.page == self.__lastPage:
+            raise LastPageReached()
+        if not (self.__firstPage and self.page < self.__firstPage):
+            self.__printer.newPage()
         self.page += 1
         self.__y = 0.0
         self._printPageHeader(dataItem)
@@ -298,8 +306,12 @@ class ReportRenderer(object):
         height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._newPage(dataItem)
-        rect = QRectF(0.0, self.__y, self.__pageWidth, height)
-        if band.render(self.__painter, rect, dataItem):
+
+        if band.preRender(dataItem):
+            # band.RenderBand == True
+            if not(self.__firstPage and self.page < self.__firstPage):
+                rect = QRectF(0.0, self.__y, self.__pageWidth, height)
+                band.render(self.__painter, rect, dataItem)
             self.__y += height
         if band.forceNewPageAfter:
             self._newPage(dataItem)
@@ -325,8 +337,12 @@ class ReportRenderer(object):
         height = band.renderHeight(self.__painter, dataItem)
         if checkEnd and self.__y + height > self.__detailBottom:
             self._continueInNewColumn(dataItem)
-        rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
-        if band.render(self.__painter, rect, dataItem):
+
+        if band.preRender(dataItem):
+            # band.RenderBand == True
+            if not(self.__firstPage and self.page < self.__firstPage):
+                rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
+                band.render(self.__painter, rect, dataItem)
             self.__y += height
         if band.forceNewPageAfter:
             self._newPage(dataItem)
@@ -516,6 +532,8 @@ class ReportRenderer(object):
 
         # 3
         self.__printer = printer
+        self.__firstPage = printer.fromPage()
+        self.__lastPage = printer.toPage()
         self._printerSetup()
         self.__painter = QPainter()
         self.__painter.begin(printer)
@@ -547,27 +565,29 @@ class ReportRenderer(object):
         except (KeyError, DataSourceExausted):
             dataItem = None
 
-        # 6
-        if rpt.headerInFirstPage:
-            self._printPageHeader(dataItem)
-        self.__detailTop = self.__y
-        self._printBegin(dataItem)
+        try:
+            if rpt.headerInFirstPage:
+                self._printPageHeader(dataItem)
+            self.__detailTop = self.__y
+            self._printBegin(dataItem)
 
-        # I'm assuming footer height _cannot_ vary according the detail item
-        # If I don't, I'll be never sure when I must print the footer
-        # just by looking at a single detail item
-        if rpt.footer is not None:
-            self.__footerHeight = rpt.footer.renderHeight(self.__painter)
-        else:
-            self.__footerHeight = 0
+            # I'm assuming footer height _cannot_ vary according the detail item
+            # If I don't, I'll be never sure when I must print the footer
+            # just by looking at a single detail item
+            if rpt.footer is not None:
+                self.__footerHeight = rpt.footer.renderHeight(self.__painter)
+            else:
+                self.__footerHeight = 0
 
-        for section in rpt.sections:
-            self._renderSection(section)
+            for section in rpt.sections:
+                self._renderSection(section)
 
-        self._printSummary(dataItem)
-        if rpt.footerInLastPage:
-            self._printPageFooter(dataItem)
-
+            self._printSummary(dataItem)
+            if rpt.footerInLastPage:
+                self._printPageFooter(dataItem)
+        except LastPageReached:
+            # Just end printing when last page
+            pass 
         self.__painter.end()
 
 
@@ -627,8 +647,13 @@ class Band(BaseElement):
             height += self.child.renderHeight(painter, data_item)
         return height
 
-    def render(self, painter, rect, data_item=None):
-
+    def preRender(self, data_item):
+        """
+        Must be called by before each call to render()
+        If preRender returns False render shouldn't be called
+        :param data_item:
+        :return: bool
+        """
         self.renderBand = True
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
@@ -636,12 +661,17 @@ class Band(BaseElement):
         if not self.renderBand:
             return False
 
+        return True
+
+    def render(self, painter, rect, data_item=None):
+
         if self.expand:
             band_rect = QRectF(rect.left(), rect.top(),
                  rect.width(), self._bandRenderHeight(painter, data_item))
         else:
             band_rect = QRectF(rect.left(), rect.top(),
                  rect.width(), self.height)
+
         self.renderSetup(painter)
         self.renderBorderAndBackground(painter, band_rect)
 
