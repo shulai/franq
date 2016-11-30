@@ -21,13 +21,13 @@ sip.setapi("QString", 2)
 
 if PYQT_VERSION == 5:
     from PyQt5.QtCore import QPointF, QRectF, QSizeF, Qt
-    from PyQt5.QtGui import (QPainter, QTextOption, QPixmap, QColor,
+    from PyQt5.QtGui import (QPainter, QTextOption, QPixmap, QImage, QColor,
         QTextDocument, QFontMetricsF)
     from PyQt5.QtPrintSupport import QPrinter
 else:
     from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
-    from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QColor,
-        QTextDocument, QFontMetricsF)
+    from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QImage,
+        QColor, QTextDocument, QFontMetricsF)
 
 inch = 300
 mm = 300 / 25.4
@@ -1018,12 +1018,14 @@ class Image(Element):
 
         Properties
         ----------
+        * image: QImage of the image, default None.
         * pixmap: QPixmap of the image, default None.
-        * fileName: name of the image file, used if pixmap is None,
-            default None.
+        * fileName: name of the image file, used if both image and pixmap are
+            None, default None.
     """
     fileName = None
     pixmap = None
+    image = None
 
     def render(self, painter, rect, data_item):
 
@@ -1032,12 +1034,19 @@ class Image(Element):
 
         if not self.pixmap:
             if self.fileName:
-                self.pixmap = QPixmap(self.fileName)
+                self.image = QImage(self.fileName)
             else:
                 return
 
-        painter.drawPixmap(
-            QRectF(self.left + rect.left(), self.top + rect.top(),
-                self.width, self.height),
-            self.pixmap,
-            QRectF(0, 0, self.pixmap.width(), self.pixmap.height()))
+        if self.image:
+            painter.drawImage(
+                QRectF(self.left + rect.left(), self.top + rect.top(),
+                    self.width, self.height),
+                self.image,
+                QRectF(0, 0, self.image.width(), self.image.height()))
+        else:
+            painter.drawPixmap(
+                QRectF(self.left + rect.left(), self.top + rect.top(),
+                    self.width, self.height),
+                self.pixmap,
+                QRectF(0, 0, self.pixmap.width(), self.pixmap.height()))
