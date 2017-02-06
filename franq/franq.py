@@ -1032,7 +1032,7 @@ class Image(Element):
         if self.on_before_print is not None:
             self.on_before_print(self, data_item)
 
-        if not self.pixmap:
+        if not self.image and not self.pixmap:
             if self.fileName:
                 self.image = QImage(self.fileName)
             else:
