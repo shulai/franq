@@ -271,6 +271,7 @@ class ReportRenderer(object):
 
     def _printerSetup(self):
         rpt = self._report
+        self.__printer.setDocName(rpt.title)
         self.__printer.setResolution(300)
         self.__printer.setPaperSize(rpt.paperSize)
         self.__printer.setOrientation(rpt.paperOrientation)
