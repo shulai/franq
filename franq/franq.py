@@ -626,7 +626,7 @@ class Band(BaseElement):
     renderBand = True
 
     def __init__(self, **kw):
-        super().__init__(**kw)
+        super(Band, self).__init__(**kw)
         if self.elements is None:
             self.elements = []
 
@@ -966,7 +966,7 @@ class Function(TextElement):
         return self._last_value
 
     def render(self, painter, rect, data_item):
-        super().render(painter, rect, data_item)
+        super(Function, self).render(painter, rect, data_item)
         self._last_id = None
 
 
