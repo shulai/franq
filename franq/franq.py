@@ -29,9 +29,10 @@ else:
     from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QImage,
         QColor, QTextDocument, QFontMetricsF)
 
-inch = 300
-mm = 300 / 25.4
-cm = 300 / 2.54
+_dpi = 300
+inch = _dpi
+mm = _dpi / 25.4
+cm = _dpi / 2.54
 
 
 class BaseElement(object):
@@ -270,9 +271,10 @@ class ReportRenderer(object):
         self.page = 1
 
     def _printerSetup(self):
+        global _dpi
         rpt = self._report
         self.__printer.setDocName(rpt.title)
-        self.__printer.setResolution(300)
+        self.__printer.setResolution(_dpi)
         self.__printer.setPaperSize(rpt.paperSize)
         self.__printer.setOrientation(rpt.paperOrientation)
         self.__printer.setPageMargins(
