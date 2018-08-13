@@ -486,12 +486,31 @@ class ReportRenderer(object):
 
                     dataItem = ds.nextDataItem()
 
-                    for group in detailBand.groups[::-1]:
-                        new_group_value = group.expression(dataItem)
-                        if new_group_value == group.value:
+                    # Check if any group footers must be printed
+                    # Checking must start from the outermost group
+                    # The most outermost group changing triggers closing
+                    # of that group and any inner group
+                    new_group_values = [group.expression(dataItem)
+                                        for group in detailBand.groups]
+
+                    # If never set to a lower value in the for loop, use
+                    # this value to avoid unrolling any group
+                    groupUnrollLevel = len(detailBand.groups) - 1
+                    for i, group in enumerate(detailBand.groups):
+                        if new_group_values[i] != group.value:
+                            groupUnrollLevel = i - 1
                             break
+                    # Can't use -1 index to include index 0 when step is -1
+                    # because negative indexes have it's own semantics.
+                    # So setting to None is required
+                    if groupUnrollLevel == -1:
+                        groupUnrollLevel = None
+
+                    for group in detailBand.groups[:groupUnrollLevel:-1]:
                         groupingLevel -= 1
-                        group.value = new_group_value
+                        print('Old group value', group.value)
+                        print('New group value', new_group_values[groupingLevel])
+                        group.value = new_group_values[groupingLevel]
                         if group.footer:
                             self._renderBandColumnWide(group.footer,
                                 ds.getPrevDataItem(), True)
