@@ -508,8 +508,6 @@ class ReportRenderer(object):
 
                     for group in detailBand.groups[:groupUnrollLevel:-1]:
                         groupingLevel -= 1
-                        print('Old group value', group.value)
-                        print('New group value', new_group_values[groupingLevel])
                         group.value = new_group_values[groupingLevel]
                         if group.footer:
                             self._renderBandColumnWide(group.footer,
