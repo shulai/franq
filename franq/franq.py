@@ -316,6 +316,9 @@ class ReportRenderer(object):
                 rect = QRectF(0.0, self.__y, self.__pageWidth, height)
                 band.render(self.__painter, rect, dataItem)
             self.__y += height
+            if self.on_after_print is not None:
+                self.on_after_print(self, dataItem)
+                
         if band.forceNewPageAfter:
             self._newPage(dataItem)
 
@@ -347,6 +350,9 @@ class ReportRenderer(object):
                 rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
                 band.render(self.__painter, rect, dataItem)
             self.__y += height
+            if self.on_after_print is not None:
+                self.on_after_print(self, dataItem)
+
         if band.forceNewPageAfter:
             self._newPage(dataItem)
 
@@ -644,6 +650,7 @@ class Band(BaseElement):
     expand = False
     dataSet = None
     renderBand = True
+    on_after_print = None
 
     def __init__(self, **kw):
         super(Band, self).__init__(**kw)
