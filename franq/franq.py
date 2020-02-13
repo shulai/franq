@@ -711,9 +711,10 @@ class Band(BaseElement):
             element.render(painter, band_rect, data_item)
 
         if self.child:
-            child_rect = QRectF(rect.left(), rect.top() + self.height,
-                rect.width(), rect.height() - self.height)
-            self.child.render(painter, child_rect, data_item)
+            if self.child.preRender(data_item):
+                child_rect = QRectF(rect.left(), rect.top() + self.height,
+                    rect.width(), rect.height() - self.height)
+                self.child.render(painter, child_rect, data_item)
 
         self.renderTearDown(painter)
         if self.on_after_print is not None:
