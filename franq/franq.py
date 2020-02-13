@@ -220,9 +220,9 @@ class Section(object):
     """
     columns = 1
     columnSpace = 0.0
-    detailBands = []
 
     def __init__(self, **kw):
+        self.detailBands = []
         for key, value in kw.items():
             self.__dict__[key] = value
 
