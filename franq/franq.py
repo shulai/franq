@@ -293,6 +293,10 @@ class ReportRenderer(object):
             self.__printer.newPage()
         self.page += 1
         self.__y = 0.0
+
+        rect = self.__printer.pageRect()
+        rect.moveTo(0.0, 0.0)
+        self._report.renderBorderAndBackground(self.__painter, rect)
         self._printPageHeader(dataItem)
 
     def _renderBandPageWide(self, band, dataItem, checkEnd=True):
