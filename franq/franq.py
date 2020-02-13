@@ -52,7 +52,7 @@ class BaseElement(object):
 
     Events
     ------
-    * on_before_print: callable (event handler), default None
+    * on_before_print(): callable (event handler), default None
     """
     border = None
     background = None
@@ -316,9 +316,7 @@ class ReportRenderer(object):
                 rect = QRectF(0.0, self.__y, self.__pageWidth, height)
                 band.render(self.__painter, rect, dataItem)
             self.__y += height
-            if self.on_after_print is not None:
-                self.on_after_print(self, dataItem)
-                
+
         if band.forceNewPageAfter:
             self._newPage(dataItem)
 
@@ -350,8 +348,6 @@ class ReportRenderer(object):
                 rect = QRectF(self.__x, self.__y, self.__columnWidth, height)
                 band.render(self.__painter, rect, dataItem)
             self.__y += height
-            if self.on_after_print is not None:
-                self.on_after_print(self, dataItem)
 
         if band.forceNewPageAfter:
             self._newPage(dataItem)
@@ -640,6 +636,11 @@ class Band(BaseElement):
             default False.
         expand: boolean, if False honors height attribute, if True expands
             height to accomodate elements if necessary
+
+        Events
+        ------
+        * on_before_print(band, item): callable (event handler), default None
+        * on_after_print(band, item): callable (event handler), default None
     """
     height = 20 * mm
     elements = None
@@ -711,6 +712,8 @@ class Band(BaseElement):
             self.child.render(painter, child_rect, data_item)
 
         self.renderTearDown(painter)
+        if self.on_after_print is not None:
+            self.on_after_print(self, data_item)
         return True
 
 
