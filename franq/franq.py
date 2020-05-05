@@ -475,8 +475,14 @@ class ReportRenderer(object):
 
                     for subdetail in detailBand.subdetails:
                         if isinstance(subdetail, DetailBand):
-                            self._renderDetailBand(subdetail,
-                                getattr(dataItem, subdetail.dataSet))
+                            dsPath = subdetail.dataSet.split('.')
+                            part = dsPath.pop(0)
+                            sub_ds = getattr(dataItem, part)
+                            while dsPath:
+                                part = dsPath.pop(0)
+                                sub_ds = getattr(sub_ds, part)
+
+                            self._renderDetailBand(subdetail, sub_ds)
                         else:
                             self._currentDetailBand = subdetail
                             self.__detailBottom = (
