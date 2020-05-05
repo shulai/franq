@@ -20,15 +20,14 @@ from setuptools import setup
 
 setup(
     name='franq',
-    version='0.9.15',
+    version='0.10.0',
     description="PyQt-based reporting framework",
     author="Julio Cesar Gazquez",
-    author_email='julio@mebamutual.com.ar',
-    packages=['franq', 'franq.designer'],
+    author_email='julio@mebamutual.com',
+    packages=['franq'],
     package_dir={'franq.designer': 'designer'},
-    use_2to3=True,
     long_description="""
-    Franq is a PyQt4 based reporting framework
+    Franq is a PyQt5 based reporting framework
     """,
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v2 or later "
@@ -45,13 +44,13 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Programming Language :: Python",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Stable",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Software Development :: User Interfaces",
         ],
-    keywords='reporting pyqt4',
+    keywords='reporting pyqt5',
     license='GPL',
     install_requires=[
-        #'PyQt'
+        #'PyQt5'
         ])

@@ -16,18 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Franq; If not, see <http://www.gnu.org/licenses/>.
 
-import sip
-sip.setapi("QString", 2)
 
-if PYQT_VERSION == 5:
-    from PyQt5.QtCore import QPointF, QRectF, QSizeF, Qt
-    from PyQt5.QtGui import (QPainter, QTextOption, QPixmap, QImage, QColor,
-        QTextDocument, QFontMetricsF)
-    from PyQt5.QtPrintSupport import QPrinter
-else:
-    from PyQt4.QtCore import QPointF, QRectF, QSizeF, Qt
-    from PyQt4.QtGui import (QPainter, QPrinter, QTextOption, QPixmap, QImage,
-        QColor, QTextDocument, QFontMetricsF)
+from PyQt5.QtCore import QPointF, QRectF, QSizeF, Qt
+from PyQt5.QtGui import (QPainter, QTextOption, QImage, QColor,
+    QTextDocument, QFontMetricsF)
+from PyQt5.QtPrintSupport import QPrinter
+
 
 _dpi = 300
 inch = _dpi
@@ -584,7 +578,7 @@ class ReportRenderer(object):
         self.__pageWidth = printer.pageRect().width()
 
         self._dataSources = {k: DataSource(ds)
-            for k, ds in dataSources.iteritems()}
+            for k, ds in dataSources.items()}
         try:
             ds = self._dataSources[rpt.dataSet]
             dataItem = ds.getDataItem()
@@ -892,7 +886,7 @@ class TextElement(Element):
         else:
             textOptions = self.textOptions
             textOptions.setWrapMode(QTextOption.WordWrap)
-            painter.drawText(elementRect, unicode(text),
+            painter.drawText(elementRect, str(text),
                 textOptions)
         self.renderTearDown(painter)
 
@@ -905,7 +899,7 @@ class Label(TextElement):
 
         Properties
         ----------
-        * text: unicode, text value of the Label.
+        * text: str, text value of the Label.
     """
 
     def _text(self, data_item):
@@ -929,7 +923,7 @@ class Field(TextElement):
         ----------
         * attrName: str, attribute name.
         * formatter: callable, optional, default None.
-        * formatStr: unicode, optional Python standard formatting string,
+        * formatStr: str, optional Python standard formatting string,
             default None.
         If both formatter and formatStr are set, formatter is used.
     """
@@ -980,7 +974,7 @@ class Function(TextElement):
         Properties
         ----------
         * func: callable, usually a lambda or a report method, receives the
-            data item as parameter, returns unicode value to render.
+            data item as parameter, returns str value to render.
     """
 
     def __init__(self, **kw):
