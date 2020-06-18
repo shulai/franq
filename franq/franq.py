@@ -740,14 +740,21 @@ class DetailBand(Band):
         * summary: Band after the detail, default None.
 
     """
-    groups = []
-    subdetails = []
+    groups = None
+    subdetails = None
     forceNewColumn = False
     columnHeader = None
     columnFooter = None
     begin = None
     summary = None
     renderIfEmpty = False
+
+    def __init__(self, **kw):
+        super(DetailBand, self).__init__(**kw)
+        if self.groups is None:
+            self.groups = []
+        if self.subdetails is None:
+            self.subdetails =[]
 
 
 class DetailGroup(object):
