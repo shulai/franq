@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import QDialog
+from PyQt5.QtWidgets import QDialog
 
 unit_factor = 300 / 25.4
 

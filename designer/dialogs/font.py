@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import QFontDialog
+from PyQt5.QtWidgets import QFontDialog
 
 
 class FontDialog(QFontDialog):

@@ -1,7 +1,7 @@
 
 import sip
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
+from PyQt5 import QtCore, QtGui, QtWidgets, QtPrintSupport
+from PyQt5.QtCore import Qt
 from franq import inch, mm
 from model import (LabelModel, FieldModel, FunctionModel, LineModel, BoxModel,
     ImageModel, BandModel, DetailBandModel)
@@ -48,20 +48,20 @@ class Grid:
 grid = Grid()
 
 
-class ElementView(QtGui.QGraphicsRectItem):
+class ElementView(QtWidgets.QGraphicsRectItem):
 
     def __init__(self, model):
         super(ElementView, self).__init__()
         self.model = model
         self.model.add_callback(self.observe_model)
         self.setFlags(
-            QtGui.QGraphicsItem.ItemIsSelectable
-            | QtGui.QGraphicsItem.ItemIsMovable
-            | QtGui.QGraphicsItem.ItemSendsGeometryChanges)
+            QtWidgets.QGraphicsItem.ItemIsSelectable
+            | QtWidgets.QGraphicsItem.ItemIsMovable
+            | QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
         self.setRect(0, 0, self.model.width, self.model.height)
 
     def itemChange(self, change, value):
-        if change == QtGui.QGraphicsRectItem.ItemPositionHasChanged:
+        if change == QtWidgets.QGraphicsRectItem.ItemPositionHasChanged:
             # TODO: Restrict to parent
             self.model.left = value.x()
             self.model.top = value.y()
@@ -71,8 +71,8 @@ class ElementView(QtGui.QGraphicsRectItem):
 
         # http://python.6.x6.nabble.com/
         # setapi-and-itemChange-setParentItem-related-bug-td4984797.html
-        if isinstance(value, QtGui.QGraphicsItem):
-            value = sip.cast(value, QtGui.QGraphicsItem)
+        if isinstance(value, QtWidgets.QGraphicsItem):
+            value = sip.cast(value, QtWidgets.QGraphicsItem)
         return value
 
     def observe_model(self, sender, event_type, _, attrs):
@@ -126,10 +126,10 @@ class FunctionView(TextView):
     #pass
 
 
-class BandView(QtGui.QGraphicsRectItem):
+class BandView(QtWidgets.QGraphicsRectItem):
     def __init__(self, model):
         super().__init__()
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
         self.setBrush(WHITE)
 
         self.model = model
@@ -283,13 +283,13 @@ class DetailBandView(BandView):
             self.height += self.model.detailSummary.height
 
 
-class SectionView(QtGui.QGraphicsRectItem):
+class SectionView(QtWidgets.QGraphicsRectItem):
 
     SECTION_EXTRA_HEIGHT = 10.0 * mm
 
     def __init__(self, model):
         super(SectionView, self).__init__()
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
         self.setBrush(WHITE)
 
         self.model = model
@@ -382,11 +382,11 @@ class SectionView(QtGui.QGraphicsRectItem):
         painter.drawText(0, self.height - 10, 'Section')
 
 
-class ReportView(QtGui.QGraphicsRectItem):
+class ReportView(QtWidgets.QGraphicsRectItem):
 
     def __init__(self, model):
         super().__init__()
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
         self.setBrush(WHITE)
         self.margin_pen = QtGui.QPen(Qt.DashLine)
 
@@ -451,12 +451,12 @@ class ReportView(QtGui.QGraphicsRectItem):
             self.remove_child(self._element_map[sections[event_data]])
 
     def update_size(self):
-        printer = QtGui.QPrinter()
+        printer = QtPrintSupport.QPrinter()
         printer.setPaperSize(self.model.paperSize)
-        size = printer.paperSize(QtGui.QPrinter.Inch) * inch
+        size = printer.paperSize(QtPrintSupport.QPrinter.Inch) * inch
         self.width = size.width()
         self.height = size.height()
-        if self.model.paperOrientation == QtGui.QPrinter.Landscape:
+        if self.model.paperOrientation == QtPrintSupport.QPrinter.Landscape:
             self.width, self.height = self.height, self.width
         self.setRect(0, 0, self.width, self.height)
         self.update_margins()

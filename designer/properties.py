@@ -1,6 +1,6 @@
 
-from PyQt4.QtCore import Qt, QAbstractTableModel
-from PyQt4 import QtGui
+from PyQt5.QtCore import Qt, QAbstractTableModel
+from PyQt5 import QtGui, QtWidgets
 from qonda.mvc.adapters import ValueListAdapter
 from qonda.mvc.delegates import ComboBoxDelegate
 import model
@@ -11,7 +11,7 @@ GRAY = QtGui.QColor('lightgray')
 unit_factor = 300 / 25.4
 
 
-class PropertyDialogDelegate(QtGui.QStyledItemDelegate):
+class PropertyDialogDelegate(QtWidgets.QStyledItemDelegate):
 
     def __init__(self, dialogClass, parent=None):
         super().__init__(parent)
@@ -24,8 +24,8 @@ class PropertyDialogDelegate(QtGui.QStyledItemDelegate):
         self._dialog.setModel(index.data(Qt.EditRole))
         self._dialog.exec_()
         index.model().setData(index, self._dialog.model())
-        self._editor = QtGui.QLabel("", parent)
-        self.closeEditor.emit(self._editor, QtGui.QAbstractItemDelegate.NoHint)
+        self._editor = QtWidgets.QLabel("", parent)
+        self.closeEditor.emit(self._editor, QtWidgets.QAbstractItemDelegate.NoHint)
         return self._editor
 
     def setEditorData(self, editor, index):

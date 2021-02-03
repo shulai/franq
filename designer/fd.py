@@ -11,8 +11,11 @@ sip.setapi('QDate', 2)
 sip.setapi('QTime', 2)
 sip.setapi('QVariant', 2)
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, pyqtSlot
+import builtins
+builtins.PYQT_VERSION = 5
+
+from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import Qt, pyqtSlot
 from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
     FunctionModel)
@@ -20,7 +23,7 @@ from view import ReportView, BandView, SectionView
 from properties import property_tables
 
 
-class MainWindow(QtGui.QMainWindow):
+class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         from fd_ui import Ui_MainWindow
@@ -28,14 +31,14 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.scale = 100.0
-        self.scene = QtGui.QGraphicsScene()
+        self.scene = QtWidgets.QGraphicsScene()
         #self.scene.setBackgroundBrush(
         #    QtGui.QBrush(QtGui.QColor('brown'), Qt.Dense4Pattern))
         self.set_scale()
         self.ui.graphicsView.setScene(self.scene)
 
         def mousePressEvent(event):
-            QtGui.QGraphicsView.mousePressEvent(self.ui.graphicsView, event)
+            QtWidgets.QGraphicsView.mousePressEvent(self.ui.graphicsView, event)
             if event.button() == Qt.LeftButton:
                 self.on_view_click()
             elif event.button() == Qt.RightButton:
@@ -50,7 +53,7 @@ class MainWindow(QtGui.QMainWindow):
         #self.view_map = {}
         self.selected = None
         self.mode = 'select'
-        self._context_menu = QtGui.QMenu()
+        self._context_menu = QtWidgets.QMenu()
 
     def new_report(self):
         self.model = ReportModel()
@@ -83,7 +86,7 @@ class MainWindow(QtGui.QMainWindow):
             self.setWindowTitle('Franq Designer [{0}]'
                 .format(os.path.basename(self.filename)))
         except IOError as e:
-            QtGui.QMessageBox.critical(self, 'Open file', str(e))
+            QtWidgets.QMessageBox.critical(self, 'Open file', str(e))
 
     def save_report(self, filename):
         with open(filename, 'wt') as report_file:
@@ -115,16 +118,16 @@ class MainWindow(QtGui.QMainWindow):
 
     @pyqtSlot()
     def on_action_Open_triggered(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File',
-            filter='Franq reports (*.franq)')
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File',
+            filter='Franq reports (*.franq)')[0]
         if filename:
             self.load_report(filename)
 
     @pyqtSlot()
     def on_action_Save_triggered(self):
         if not self.filename:
-            filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File',
-            filter='Franq reports (*.franq)')
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',
+            filter='Franq reports (*.franq)')[0]
             if not filename:
                 return
         else:
@@ -134,8 +137,8 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot()
     def on_action_Generate_triggered(self):
         if not self.filename:
-            filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File',
-            filter='Franq reports (*.franq)')
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',
+            filter='Franq reports (*.franq)')[0]
             if not filename:
                 return
         else:
@@ -146,8 +149,8 @@ class MainWindow(QtGui.QMainWindow):
 
     @pyqtSlot()
     def on_action_Save_As_triggered(self):
-        filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File',
-            filter='Franq reports (*.franq)')
+        filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',
+            filter='Franq reports (*.franq)')[0]
         if not filename:
             return
         self.save_report(filename)
@@ -542,10 +545,10 @@ class MainWindow(QtGui.QMainWindow):
         self.selected.parent.remove_band('child')
 
 
-class DesignerApp(QtGui.QApplication):
+class DesignerApp(QtWidgets.QApplication):
 
     def __init__(self, argv):
-        super(QtGui.QApplication, self).__init__(argv)
+        super().__init__(argv)
         try:
             filename = (arg for arg in argv[1:] if arg[0] != '-').__next__()
         except StopIteration:
@@ -559,9 +562,10 @@ class DesignerApp(QtGui.QApplication):
 
     def exec_(self):
         self.main_window.show()
-        super(QtGui.QApplication, self).exec_()
+        super().exec_()
 
 
 if __name__ == '__main__':
     app = DesignerApp(sys.argv)
     sys.exit(app.exec_())
+

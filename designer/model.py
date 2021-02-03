@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import QFont
+from PyQt5.QtGui import QFont
 from qonda.mvc.observable import ObservableObject, ObservableListProxy
 import franq
 
