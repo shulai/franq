@@ -18,8 +18,8 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
 from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
-    FunctionModel)
-from view import ReportView, BandView, SectionView
+    FunctionModel, GroupModel)
+from view import ReportView, BandView, SectionView, grid
 from properties import property_tables
 
 
@@ -391,6 +391,10 @@ class MainWindow(QtWidgets.QMainWindow):
                             'Add detail summary band')
                         action.triggered.connect(self.add_detail_summary_band)
 
+                    action = self._context_menu.addAction(
+                        'Add detail group')
+                    action.triggered.connect(self.add_detail_group)
+
             elif isinstance(element.parent, BandModel):
                 action = self._context_menu.addAction(
                     QtGui.QIcon.fromTheme('item-delete'), 'Remove Band')
@@ -534,6 +538,12 @@ class MainWindow(QtWidgets.QMainWindow):
         assert(detail_band.detailSummary is None)
         band = BandModel('Detail Summary Band')
         detail_band.detailSummary = band
+
+    def add_detail_group(self):
+        detail_band = self.selected
+        assert(detail_band.detailSummary is None)
+        group = GroupModel()
+        detail_band.groups.append(group)
 
     def add_child_band(self):
         band = self.selected
