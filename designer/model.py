@@ -8,7 +8,9 @@ mm = franq.mm
 
 
 class CallGenerator:
-
+    """
+    This class generates code for calls (usually object creation)
+    """
     def __init__(self, name, *params):
         self._name = name
         self._params = list(params)
@@ -26,14 +28,19 @@ class CallGenerator:
                 )
             )
 
-    def param_list(self, name, l):
-        self.param(name, "[" + ", ".join((x for x in l)) + "]")
+    def param_list(self, name, l, padding):
+        self.param(
+            name,
+            "[\n"
+            + ",\n".join(((" " * padding) + x for x in l))
+            + "]"
+        )
 
-    def generate(self):
+    def generate(self, padding=0):
         return (
             self._name
-                + "(" + ", ".join(
-                    [pair[0] + "=" + pair[1]
+                + "(\n" + ",\n".join(
+                    [" " * padding + pair[0] + "=" + pair[1]
                     for pair in self._params]) + ")")
 
 
@@ -133,12 +140,12 @@ class LabelModel(TextModel):
         json['text'] = self.text
         return json
 
-    def generate(self):
+    def generate(self, padding):
         gen = self._generator('Label')
         if self.font:
             gen.param_font(self.font)
         gen.param('text', repr(self.text))
-        return gen.generate()
+        return gen.generate(padding)
 
 
 class FieldModel(TextModel):
@@ -160,13 +167,13 @@ class FieldModel(TextModel):
         json['format'] = self.format
         return json
 
-    def generate(self):
+    def generate(self, padding=0):
         gen = self._generator('Field')
         if self.font:
             gen.param_font(self.font)
         gen.param('attrName', repr(self.attrName))
         gen.param('formatStr', repr(self.format))
-        return gen.generate()
+        return gen.generate(padding)
 
 
 class FunctionModel(TextModel):
@@ -185,12 +192,12 @@ class FunctionModel(TextModel):
         json['func'] = self.func
         return json
 
-    def generate(self):
+    def generate(self, padding=0):
         gen = self._generator('Function')
         if self.font:
             gen.param_font(self.font)
         gen.param('func', repr(self.func))
-        return gen.generate()
+        return gen.generate(padding)
 
 
 class LineModel(ElementModel):
@@ -319,15 +326,17 @@ class BandModel(ObservableObject):
 
         return json
 
-    def generate(self):
+    def generate(self, padding=0):
         gen = CallGenerator("Band",
             ("height", str(self.height)),
             ("expand", repr(self.expand)))
 
         if self.font:
             gen.param_font(self.font)
-        gen.param_list("elements", [el.generate() for el in self.elements])
-        return gen.generate()
+        gen.param_list("elements",
+                       [el.generate(padding + 4) for el in self.elements],
+                       padding)
+        return gen.generate(padding)
 
 
 class DetailBandModel(BandModel):
@@ -342,6 +351,7 @@ class DetailBandModel(BandModel):
         self.columnFooter = None
         self.detailBegin = None
         self.detailSummary = None
+        self.groups = []
 
     def add_band(self, band_attr, band):
         if band_attr not in ('child', 'columnHeader', 'columnFooter',
@@ -350,9 +360,66 @@ class DetailBandModel(BandModel):
         self._add_band(band_attr, band)
 
     def load(self, json):
+        def group(group_json):
+            g = GroupModel()
+            g.load(group_json)
+            g.parent = self  # Assign here to be able to do comprehension below
+            return g
+
         super().load(json)
         if 'dataSet' in json:
             self.dataSet = json['dataSet']
+        if 'groups' in json and json['groups']:
+            self.groups = [group(group_json) for group_json in json['groups']]
+
+    def save(self):
+        json = super().save()
+        if self.groups:
+            json['groups'] = [g.save() for g in self.groups]
+        return json
+
+    def generate(self, padding=0):
+        gen = CallGenerator("DetailBand",
+            ("height", str(self.height)),
+            ("expand", repr(self.expand)))
+
+        if self.font:
+            gen.param_font(self.font)
+        gen.param_list("elements", [el.generate(padding + 4)
+            for el in self.elements])
+        gen.param_list("groups", [g.generate(padding + 4) for g in self.groups])
+        return gen.generate(padding)
+
+
+class GroupModel(ObservableObject):
+
+    def __init__(self):
+        super(GroupModel, self).__init__()
+        self.expression = ''
+        self.headerBand = BandModel('Group header')
+        self.footerBand = BandModel('Group footer')
+
+    def load(self, json):
+        self.expression = json['expression']
+        self.headerBand = BandModel('Group header')
+        self.headerBand.load(json['header'])
+        self.footerBand = BandModel('Group footer')
+        self.footerBand.load(json['footer'])
+
+    def save(self):
+        json = {
+            'expression': self.expression,
+            'header': self.headerBand.save(),
+            'footer': self.footerBand.save()
+            }
+        return json
+
+    def generate(self, padding=0):
+        gen = CallGenerator("DetailGroup",
+            ('expression', str(self.expression)))
+        gen.param('header', self.headerBand.generate(padding + 4))
+        gen.param('footer', self.footerBand.generate(padding + 4))
+        return gen.generate(padding)
 
 
 class SectionModel(ObservableObject):
@@ -397,6 +464,14 @@ class SectionModel(ObservableObject):
     def active_font(self):
         return self.parent.active_font()
 
+    def generate(self, padding=0):
+        gen = CallGenerator("Section",
+            ("columns", str(self.columns)),
+            ("columnSpace", str(self.columnSpace)))
+        gen.param_list("detailBands", [d.generate(padding + 4)
+            for d in self.detailBands])
+        return gen.generate(padding)
+
 
 class ReportModel(ObservableObject):
 
@@ -419,6 +494,8 @@ class ReportModel(ObservableObject):
         self.summary = None
         self.sections = ObservableListProxy()
         self.dataSet = None
+        self.grid_x_spacing = 2 * mm
+        self.grid_y_spacing = 4 * mm
 
     def active_font(self):
         return self.font
@@ -474,6 +551,8 @@ class ReportModel(ObservableObject):
             self.add_band('summary', BandModel('Summary Band'))
             self.summary.load(json['summary'])
 
+        self.grid_x_spacing = json['grid_x_spacing']
+
     def save(self):
         """
         Convert report structure to serializable form
@@ -487,7 +566,9 @@ class ReportModel(ObservableObject):
                 self.font.family(),
                 self.font.pointSize(),
                 self.font.weight(),
-                self.font.italic())
+                self.font.italic()),
+            'grid_x_spacing': self.grid_x_spacing,
+            'grid_y_spacing': self.grid_y_spacing
             }
 
         if self.begin:
@@ -536,5 +617,16 @@ class ReportModel(ObservableObject):
                 repr(self.font.italic())))
 
         if self.begin:
-            s += "        self.begin = " + self.begin.generate() + "\n"
+            s += "        self.begin = " + self.begin.generate(12) + "\n"
+        if self.header:
+            s += "        self.header= " + self.header.generate(12) + "\n"
+        s += "        self.sections = [\n"
+        for section in self.sections:
+            s += section.generate(12) + "\n"
+        s += "            ]\n"
+        if self.footer:
+            s += "        self.footer = " + self.footer.generate(12) + "\n"
+        if self.summary:
+            s += "        self.begin = " + self.summary.generate(12) + "\n"
         return s
+
