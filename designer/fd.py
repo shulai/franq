@@ -308,7 +308,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def showContextMenu(self, pos):
         self._context_menu.clear()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        item_view = self.scene.itemAt(scene_pos)
+        item_view = self.scene.itemAt(scene_pos, self.ui.graphicsView.transform())
         if not item_view:
             return
         element = item_view.model
