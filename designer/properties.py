@@ -246,7 +246,7 @@ property_tables = {
         DimensionProperty('height')),
 
     model.LabelModel: PropertyTable(
-        AlignmentProperty('alignmnent'),
+        AlignmentProperty('alignment'),
         BooleanProperty('expand'),
         FontProperty('font'),
         DimensionProperty('height'),
@@ -256,7 +256,7 @@ property_tables = {
         DimensionProperty('width')),
 
     model.FieldModel: PropertyTable(
-        AlignmentProperty('alignmnent'),
+        AlignmentProperty('alignment'),
         Property('attrName'),
         BooleanProperty('expand'),
         FontProperty('font'),
@@ -266,7 +266,7 @@ property_tables = {
         DimensionProperty('width')),
 
     model.FunctionModel: PropertyTable(
-        AlignmentProperty('alignmnent'),
+        AlignmentProperty('alignment'),
         BooleanProperty('expand'),
         FontProperty('font'),
         Property('func'),
