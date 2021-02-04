@@ -59,7 +59,23 @@ class ElementView(QtWidgets.QGraphicsRectItem):
             | QtWidgets.QGraphicsItem.ItemIsMovable
             | QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
         self.setRect(0, 0, self.model.width, self.model.height)
+        self._is_resizing = False
 
+    def mousePressEvent(self, event):
+        pos = event.pos()
+        rect = self.rect()
+        self._is_resizing = (
+            pos.y() >= rect.bottom() - 1
+            or pos.x() >= rect.right() - 1)
+
+    def mouseMoveEvent(self, event):
+        if self._is_resizing:
+            pos = event.scenePos()
+            ori = self.pos()
+            self.setRect(0, 0, pos.x() - ori.x(), pos.y() - ori.y())
+        else:
+            super().mouseMoveEvent(event)
+            
     def itemChange(self, change, value):
         if change == QtWidgets.QGraphicsRectItem.ItemPositionHasChanged:
             # TODO: Restrict to parent
