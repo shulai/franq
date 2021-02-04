@@ -252,12 +252,14 @@ property_tables = {
         DimensionProperty('height'),
         DimensionProperty('left'),
         Property('text'),
+        BooleanProperty('richText'),
         DimensionProperty('top'),
         DimensionProperty('width')),
 
     model.FieldModel: PropertyTable(
         AlignmentProperty('alignment'),
         Property('attrName'),
+        BooleanProperty('richText'),
         BooleanProperty('expand'),
         FontProperty('font'),
         DimensionProperty('height'),
@@ -270,8 +272,28 @@ property_tables = {
         BooleanProperty('expand'),
         FontProperty('font'),
         Property('func'),
+        BooleanProperty('richText'),
         DimensionProperty('height'),
         DimensionProperty('left'),
         DimensionProperty('top'),
-        DimensionProperty('width'))
+        DimensionProperty('width')),
+
+    model.LineModel: PropertyTable(
+        DimensionProperty('height'),
+        DimensionProperty('left'),
+        DimensionProperty('top'),
+        DimensionProperty('width')),
+
+    model.BoxModel: PropertyTable(
+        DimensionProperty('height'),
+        DimensionProperty('left'),
+        DimensionProperty('top'),
+        DimensionProperty('width')),
+    
+    model.ImageModel: PropertyTable(
+        DimensionProperty('height'),
+        DimensionProperty('left'),
+        DimensionProperty('top'),
+        DimensionProperty('width'),
+        Property('fileName'))
     }

@@ -50,6 +50,8 @@ class ElementModel(ObservableObject):
         super(ElementModel, self).__init__()
         self.parent = None
         self.font = None
+        self.top = 0.0
+        self.left = 0.0
 
     def load(self, json):
         self.top = json['top']
@@ -77,8 +79,6 @@ class TextModel(ElementModel):
 
     def __init__(self):
         super().__init__()
-        self.top = 0.0
-        self.left = 0.0
         self.width = 20 * mm
         self.height = 4 * mm
         self.expand = False
@@ -204,29 +204,71 @@ class LineModel(ElementModel):
 
     def __init__(self):
         super().__init__()
+        self.width = 20.0 * mm
+        self.height = 20.0 * mm
+
+    def generate(self, padding=0):
+        gen = CallGenerator('Function',
+            ('top', str(self.top)),
+            ('left', str(self.left)),
+            ('width', str(self.width)),
+            ('height', str(self.height)),
+            *params
+            )
+        if self.fileName:
+            gen.param('fileName', self.fileName)
+        return gen.generate(padding)
 
 
 class BoxModel(ElementModel):
 
     def __init__(self):
         super().__init__()
+        self.width = 20.0 * mm
+        self.height = 20.0 * mm
+
+    def generate(self, padding=0):
+        gen = CallGenerator('Function',
+            ('top', str(self.top)),
+            ('left', str(self.left)),
+            ('width', str(self.width)),
+            ('height', str(self.height)),
+            *params
+            )
+        if self.fileName:
+            gen.param('fileName', self.fileName)
+        return gen.generate(padding)
 
 
 class ImageModel(ElementModel):
 
     def __init__(self):
         super().__init__()
+        self.width = 20.0 * mm
+        self.height = 20.0 * mm
         self.fileName = None
 
     def load(self, json):
         super().load(json)
-        self.fileName = json['filename']
+        self.fileName = json['fileName']
 
     def save(self):
         json = super().save()
         json['type'] = 'image'
         json['fileName'] = self.fileName
         return json
+
+    def generate(self, padding=0):
+        gen = CallGenerator('Function',
+            ('top', str(self.top)),
+            ('left', str(self.left)),
+            ('width', str(self.width)),
+            ('height', str(self.height)),
+            *params
+            )
+        if self.fileName:
+            gen.param('fileName', self.fileName)
+        return gen.generate(padding)
 
 
 element_classes = {

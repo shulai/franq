@@ -18,7 +18,7 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
 from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
-    FunctionModel, GroupModel)
+    FunctionModel, LineModel, BoxModel, ImageModel, GroupModel)
 from view import ReportView, BandView, SectionView, grid
 from properties import property_tables
 
@@ -187,12 +187,30 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mode = 'add_function'
         self.scene.clearSelection()
 
+    @pyqtSlot()
+    def on_action_Add_Line_triggered(self):
+        self.mode = 'add_line'
+        self.scene.clearSelection()
+
+    @pyqtSlot()
+    def on_action_Add_Box_triggered(self):
+        self.mode = 'add_box'
+        self.scene.clearSelection()
+
+    @pyqtSlot()
+    def on_action_Add_Image_triggered(self):
+        self.mode = 'add_image'
+        self.scene.clearSelection()
+
     def on_view_click(self):
         {
             'select': self.select_item,
             'add_label': self.add_label,
             'add_field': self.add_field,
-            'add_function': self.add_function
+            'add_function': self.add_function,
+            'add_line': self.add_line,
+            'add_box': self.add_box,
+            'add_image': self.add_image
             }[self.mode]()
 
     @pyqtSlot()
@@ -457,6 +475,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def add_function(self):
         self.add_element(FunctionModel)
+
+    def add_line(self):
+        print('add_line')
+        self.add_element(LineModel)
+
+    def add_box(self):
+        self.add_element(BoxModel)
+
+    def add_image(self):
+        self.add_element(ImageModel)
 
     def add_report_band(self, band_attr, band):
         self.model.add_band(band_attr, band)

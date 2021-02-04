@@ -89,7 +89,7 @@ class ElementView(QtWidgets.QGraphicsRectItem):
 class TextView(ElementView):
 
     def paint(self, painter, option, widget):
-        super(TextView, self).paint(painter, option, widget)
+        super().paint(painter, option, widget)
         font = QtGui.QFont(self.model.active_font())
         font.setPointSize(font.pointSize() * inch // 72)
         painter.setFont(font)
@@ -115,16 +115,22 @@ class FunctionView(TextView):
         return self.model.func
 
 
-#class LineView(QtGui.QWidget):
-    #pass
+class LineView(ElementView):
+
+    def paint(self, painter, option, widget):
+        super().paint(painter, option, widget)
 
 
-#class BoxView(QtGui.QWidget):
-    #pass
+class BoxView(ElementView):
 
-#class ImageView(QtGui.QWidget):
-    #pass
+    def paint(self, painter, option, widget):
+        super().paint(painter, option, widget)
 
+class ImageView(ElementView):
+
+    def paint(self, painter, option, widget):
+        super().paint(painter, option, widget)
+            
 
 class BandView(QtWidgets.QGraphicsRectItem):
     def __init__(self, model):
@@ -152,9 +158,9 @@ class BandView(QtWidgets.QGraphicsRectItem):
             LabelModel: LabelView,
             FieldModel: FieldView,
             FunctionModel: FunctionView,
-            LineModel: None,
-            BoxModel: None,
-            ImageModel: None,
+            LineModel: LineView,
+            BoxModel: BoxView,
+            ImageModel: ImageView,
             }[type(element)]
         child = class_(element)
         child.setParentItem(self)
