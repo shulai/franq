@@ -24,7 +24,7 @@ class CallGenerator:
                 repr(font.family()),
                 font.pointSize(),
                 font.weight(),
-                repr(self.font.italic())
+                repr(font.italic())
                 )
             )
 
@@ -83,6 +83,7 @@ class TextModel(ElementModel):
         self.height = 4 * mm
         self.expand = False
         self.alignment = False
+        self.richText = False
 
     def load(self, json):
         super().load(json)
@@ -90,6 +91,8 @@ class TextModel(ElementModel):
             self.font = QFont(*json['font'])
         if json.get('alignment'):
             self.alignment = json['alignment']
+        if json.get('richText'):
+            self.richText = json['richText']
 
     def save(self):
         json = super().save()
@@ -108,6 +111,7 @@ class TextModel(ElementModel):
             ('left', str(self.left)),
             ('width', str(self.width)),
             ('height', str(self.height)),
+            ('richText', str(self.richText)),
             *params
             )
         if self.alignment:
@@ -427,9 +431,14 @@ class DetailBandModel(BandModel):
 
         if self.font:
             gen.param_font(self.font)
-        gen.param_list("elements", [el.generate(padding + 4)
-            for el in self.elements])
-        gen.param_list("groups", [g.generate(padding + 4) for g in self.groups])
+        gen.param_list("elements", 
+                       [el.generate(padding + 4)
+                        for el in self.elements],
+                       padding)
+        gen.param_list("groups",
+                       [g.generate(padding + 4) 
+                       for g in self.groups],
+                       padding)
         return gen.generate(padding)
 
 
@@ -510,8 +519,10 @@ class SectionModel(ObservableObject):
         gen = CallGenerator("Section",
             ("columns", str(self.columns)),
             ("columnSpace", str(self.columnSpace)))
-        gen.param_list("detailBands", [d.generate(padding + 4)
-            for d in self.detailBands])
+        gen.param_list("detailBands", 
+                       [d.generate(padding + 4)
+                        for d in self.detailBands],
+                       padding)
         return gen.generate(padding)
 
 
