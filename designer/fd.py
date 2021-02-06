@@ -316,10 +316,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def select_element(self, element):
         self.selected = element
         property_names = [name
-                         for name in  property_tables[type(element)]]
+                         for name in property_tables[type(element)]]
         property_names.sort()
         property_list = [property_registry[property_name] 
-                         for property_name in  property_tables[type(element)]]
+                         for property_name in property_names]
         self.property_table = PropertyTable(*property_list)
         self.property_table.setModel(element)
         self.ui.properties.setModel(self.property_table)
