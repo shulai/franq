@@ -279,6 +279,17 @@ element_classes = {
     }
 
 
+def element_from_json(el_json, parent=None):
+    """
+    
+    """
+    class_ = el_json['type']
+    e = element_classes[class_]()
+    e.load(el_json)
+    e.parent = parent
+    return e
+
+
 class BandModel(ObservableObject):
 
     _notifiables_ = ('description', 'height', 'pen', 'background', 'font',
@@ -321,13 +332,6 @@ class BandModel(ObservableObject):
 
     def load(self, json):
 
-        def element(el_json):
-            class_ = el_json['type']
-            e = element_classes[class_]()
-            e.load(el_json)
-            e.parent = self  # Assign here to be able to do comprehension below
-            return e
-
         self.height = json['height']
         # TODO: Load values if available
         self.pen = None
@@ -337,7 +341,7 @@ class BandModel(ObservableObject):
 
         if 'elements' in json and json['elements']:
             self.elements = ObservableListProxy(
-                [element(e) for e in json['elements']])
+                [element_from_json(e, self) for e in json['elements']])
 
         if json.get('child'):
             band = BandModel('Child Band')

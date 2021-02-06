@@ -19,7 +19,7 @@ from PyQt5.QtCore import Qt, pyqtSlot
 from qonda.mvc.observable import Observable
 from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
-    FunctionModel, LineModel, BoxModel, ImageModel, GroupModel)
+    FunctionModel, LineModel, BoxModel, ImageModel, GroupModel, element_from_json)
 from view import ReportView, grid
 from properties import PropertyTable, property_registry, property_tables
 
@@ -34,8 +34,7 @@ class SelectionGroup(Observable):
             element.add_callback(self.__observe)
 
     def __getattr__(self, name):
-        """ Returns attribute value if equal in all items, None otherwise """        
-        print('geta', name)
+        """ Returns attribute value if equal in all items, None otherwise """
         if len(self.__elements) == 0:
             return None
         v = getattr(self.__elements[0], name)
@@ -84,6 +83,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.showContextMenu)
         self.model = None
         self.view = None
+        self.__clipboard = None
         #self.view_map = {}
         self.mode = 'select'
         self._context_menu = QtWidgets.QMenu()
@@ -494,7 +494,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except IndexError:
             pass
 
-    def add_element(self, ElementClass):
+    def add_element(self, element):
         selection = self.scene.selectedItems()
         assert(len(selection)==1)
 
@@ -506,8 +506,6 @@ class MainWindow(QtWidgets.QMainWindow):
             band = view_item.parentItem().model
         else:
             band = view_item.model
-
-        element = ElementClass()
 
         cursor_pos = self.ui.graphicsView.mapFromGlobal(QtGui.QCursor.pos())
         cursor_scene_pos = self.ui.graphicsView.mapToScene(cursor_pos)
@@ -528,23 +526,23 @@ class MainWindow(QtWidgets.QMainWindow):
         element.parent.remove_element(element)
 
     def add_label(self):
-        self.add_element(LabelModel)
+        self.add_element(LabelModel())
 
     def add_field(self):
-        self.add_element(FieldModel)
+        self.add_element(FieldModel())
 
     def add_function(self):
-        self.add_element(FunctionModel)
+        self.add_element(FunctionModel())
 
     def add_line(self):
         print('add_line')
-        self.add_element(LineModel)
+        self.add_element(LineModel())
 
     def add_box(self):
-        self.add_element(BoxModel)
+        self.add_element(BoxModel())
 
     def add_image(self):
-        self.add_element(ImageModel)
+        self.add_element(ImageModel())
 
     def add_report_band(self, band_attr, band):
         self.model.add_band(band_attr, band)
@@ -637,6 +635,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def remove_child_band(self):
         self.selected.parent.remove_band('child')
+
+    @pyqtSlot()
+    def on_action_Copy_triggered(self):
+        self.__clipboard = [item.model.save() for item in self.scene.selectedItems() 
+                            if isinstance(item.model, ElementModel)]
+
+    @pyqtSlot()
+    def on_action_Cut_triggered(self):
+        self.on_action_Copy_triggered()
+        elements = [item.model for item in self.scene.selectedItems() 
+                            if isinstance(item.model, ElementModel)]
+        for element in elements:
+            self.remove_element()
+        
+    @pyqtSlot()
+    def on_action_Paste_triggered(self):
+        for e in self.__clipboard:
+            new_element = element_from_json(e)
+            self.add_element(new_element)
+            # Shift in order to allow multiple pastes without overlap
+            e['top'] += 60
+            e['left'] += 60
 
 
 class DesignerApp(QtWidgets.QApplication):
