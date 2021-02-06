@@ -186,6 +186,10 @@ class BandView(QtWidgets.QGraphicsRectItem):
         else:
             self._children.insert(pos, child)
         self._element_map[element] = child
+        scene = self.scene()
+        if scene:
+            self.scene().clearSelection()
+            child.setSelected(True)
         return child
 
     def _remove_child(self, pos):
@@ -193,6 +197,8 @@ class BandView(QtWidgets.QGraphicsRectItem):
         child.setParentItem(None)
         self.scene().removeItem(child)
         del self._element_map[child.model]
+        self.scene().clearSelection()
+        self.setSelected(True)
 
     def _add_band_child(self, child, position=None):
         child.setParentItem(self)
@@ -225,6 +231,10 @@ class BandView(QtWidgets.QGraphicsRectItem):
         #except AttributeError:
         #    pass
         self._element_map[child.model] = child
+
+        self.scene().clearSelection()
+        child.setSelected(True)
+
         return child
 
     def _remove_band_child(self, child):
@@ -238,6 +248,10 @@ class BandView(QtWidgets.QGraphicsRectItem):
         self.setRect(0, 0, self.width, self.model.height)
         self.parentItem().child_size_updated(self)
         del self._element_map[child.model]
+        
+        self.scene().clearSelection()
+        self.setSelected(True)
+
 
     def child_size_updated(self, child):
         # Child (child models) updated height, propagate to parent

@@ -298,8 +298,8 @@ class BandModel(ObservableObject):
         return self.font if self.font else self.parent.active_font()
 
     def add_element(self, element):
-        self.elements.append(element)
         element.parent = self
+        self.elements.append(element)
 
     def remove_element(self, element):
         self.elements.remove(element)

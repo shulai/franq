@@ -16,12 +16,45 @@ builtins.PYQT_VERSION = 5
 
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
+from qonda.mvc.observable import Observable
 from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
     FunctionModel, LineModel, BoxModel, ImageModel, GroupModel)
-from view import ReportView, BandView, SectionView, grid
+from view import ReportView, grid
 from properties import PropertyTable, property_registry, property_tables
 
+
+class SelectionGroup(Observable):
+    
+    def __init__(self, elements):
+        super().__init__()
+        # Avoid premature call to __getattr__ 
+        self.__dict__['_SelectionGroup__elements'] = elements
+        for element in elements:
+            element.add_callback(self.__observe)
+
+    def __getattr__(self, name):
+        """ Returns attribute value if equal in all items, None otherwise """        
+        print('geta', name)
+        if len(self.__elements) == 0:
+            return None
+        v = getattr(self.__elements[0], name)
+        for element in self.__elements[1:]:
+            v1 = getattr(element, name)
+            if v != v1:
+                return None
+        return v
+    
+    def __setattr__(self, name, value):
+        if value is None:  # FIXME: Find the way to do this safely 
+            return
+        for element in self.__elements:
+            setattr(element, name, value)
+    
+    def __observe(self, sender, event_type, _, event_data):
+        if event_type == 'update':
+            self._notify('update', event_data)
+ 
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -34,6 +67,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.scene = QtWidgets.QGraphicsScene()
         #self.scene.setBackgroundBrush(
         #    QtGui.QBrush(QtGui.QColor('brown'), Qt.Dense4Pattern))
+        self.scene.selectionChanged.connect(self.update_property_view)
         self.set_scale()
         self.ui.graphicsView.setScene(self.scene)
 
@@ -51,7 +85,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.model = None
         self.view = None
         #self.view_map = {}
-        self.selected = None
         self.mode = 'select'
         self._context_menu = QtWidgets.QMenu()
 
@@ -64,7 +97,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.scene.removeItem(self.view)
         self.view = ReportView(self.model)
         self.scene.addItem(self.view)
-        self.select_element(self.model)
+        self.select_element(self.view)
         self.filename = None
         self.setWindowTitle('Franq Designer [New Report]')
 
@@ -81,7 +114,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.scene.removeItem(self.view)
             self.view = ReportView(self.model)
             self.scene.addItem(self.view)
-            self.select_element(self.model)
+            self.select_element(self.view)
             self.filename = filename
             self.setWindowTitle('Franq Designer [{0}]'
                 .format(os.path.basename(self.filename)))
@@ -313,15 +346,34 @@ class MainWindow(QtWidgets.QMainWindow):
             item.top = item_top
             item_top += item.height + space_between
 
-    def select_element(self, element):
-        self.selected = element
-        property_names = [name
-                         for name in property_tables[type(element)]]
+    def select_element(self, item):
+        self.scene.clearSelection()
+        item.setSelected(True)
+        
+    def update_property_view(self):
+        selection = self.scene.selectedItems()
+        if not selection:
+            property_names = []
+        else:
+            element = selection[0].model
+            property_names = {name
+                            for name in property_tables[type(element)]}
+            for item_view in selection[1:]:
+                element = item_view.model
+                property_names &= {name
+                            for name in property_tables[type(element)]}
+            property_names = list(property_names)
         property_names.sort()
         property_list = [property_registry[property_name] 
                          for property_name in property_names]
         self.property_table = PropertyTable(*property_list)
-        self.property_table.setModel(element)
+        if len(selection) == 0:
+            self.property_table.setModel(None)
+        elif len(selection) == 1:
+            self.property_table.setModel(element)
+        else:
+            group = SelectionGroup([item_view.model for item_view in selection])
+            self.property_table.setModel(group)
         self.ui.properties.setModel(self.property_table)
         for row in range(0, self.property_table.rowCount()):
             delegate = self.property_table.delegate(row)
@@ -334,8 +386,8 @@ class MainWindow(QtWidgets.QMainWindow):
         item_view = self.scene.itemAt(scene_pos, self.ui.graphicsView.transform())
         if not item_view:
             return
+        self.select_element(item_view)
         element = item_view.model
-        self.select_element(element)
         if isinstance(element, ReportModel):
             if not element.begin:
                 action = self._context_menu.addAction('Add begin band')
@@ -437,16 +489,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def select_item(self):
         try:
-            element = self.scene.selectedItems()[0].model
-            self.select_element(element)
+            item = self.scene.selectedItems()[0]
+            self.select_element(item)
         except IndexError:
             pass
 
     def add_element(self, ElementClass):
-        view_item = self.scene.selectedItems()[0]
-        if not view_item:
-            return
-        elif isinstance(view_item.model, ReportModel):
+        selection = self.scene.selectedItems()
+        assert(len(selection)==1)
+
+        view_item = selection[0]
+
+        if isinstance(view_item.model, ReportModel):
             return
         if isinstance(view_item.model, ElementModel):
             band = view_item.parentItem().model
@@ -463,13 +517,14 @@ class MainWindow(QtWidgets.QMainWindow):
         if grid.snap_to_grid:
             grid.snap(element)
         band.add_element(element)
-
-        self.select_element(element)
         self.mode = 'select'
 
     def remove_element(self):
-        element = self.selected
-        self.select_element(element.parent)
+        selection = self.scene.selectedItems()
+        assert(len(selection)==1)
+        view_item = selection[0]
+        self.select_element(view_item.parent)
+        element = view_item.model
         element.parent.remove_element(element)
 
     def add_label(self):
@@ -493,11 +548,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def add_report_band(self, band_attr, band):
         self.model.add_band(band_attr, band)
-        self.select_element(band)
 
     def remove_report_band(self, band_attr):
         self.model.remove_band(band_attr)
-        self.select_element(self.model)
 
     def add_begin_band(self):
         self.add_report_band('begin', BandModel('Begin Band'))
@@ -530,7 +583,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def remove_section(self):
         section = self.selected
         self.model.remove_section(section)
-        self.select_element(self.model)
 
     def add_section_detailband(self):
         section = self.selected
@@ -546,7 +598,6 @@ class MainWindow(QtWidgets.QMainWindow):
         band = self.selected
         section = band.parent
         section.remove_band(band)
-        self.select_element(section)
 
     def add_detail_begin_band(self):
         detail_band = self.selected
