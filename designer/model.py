@@ -200,7 +200,7 @@ class FunctionModel(TextModel):
         gen = self._generator('Function')
         if self.font:
             gen.param_font(self.font)
-        gen.param('func', repr(self.func))
+        gen.param('func', self.func)
         return gen.generate(padding)
 
 
