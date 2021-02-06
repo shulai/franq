@@ -218,82 +218,109 @@ class PropertyTable(QAbstractTableModel):
             pass
 
 
+property_registry = {
+        'alignment': AlignmentProperty('alignment'),
+        'expand': BooleanProperty('expand'),
+        'richText': BooleanProperty('richText'),
+        'grid_x_spacing': DimensionProperty('grid_x_spacing'),
+        'grid_y_spacing': DimensionProperty('grid_y_spacing'),
+        'height': DimensionProperty('height'),
+        'left': DimensionProperty('left'),
+        'top': DimensionProperty('top'),
+        'width': DimensionProperty('width'),
+        'font': FontProperty('font'),
+        'margins': MarginsProperty('margins'),
+        'paperSize': PaperSizeProperty('paperSize'),
+        'attrName': Property('attrName'),
+        'columns': Property('columns'),
+        'columnSpace': Property('columnSpace'),
+        'dataSet': Property('dataSet'),
+        'fileName': Property('fileName'),
+        'func': Property('func'),
+        'name': Property('name'),
+        'text': Property('text'),
+        'title': Property('title')    
+    }
+
 property_tables = {
 
-    model.ReportModel: PropertyTable(
-        Property('dataSet'),
-        FontProperty('font'),
-        MarginsProperty('margins'),
-        Property('name'),
-        PaperSizeProperty('paperSize'),
-        Property('title'),
-        DimensionProperty('grid_x_spacing'),
-        DimensionProperty('grid_y_spacing')),
-
-    model.SectionModel: PropertyTable(
-        Property('columns'),
-        Property('columnSpace')),
-
-    model.BandModel: PropertyTable(
-        BooleanProperty('expand'),
-        FontProperty('font'),
-        DimensionProperty('height')),
-
-    model.DetailBandModel: PropertyTable(
-        Property('dataSet'),
-        BooleanProperty('expand'),
-        FontProperty('font'),
-        DimensionProperty('height')),
-
-    model.LabelModel: PropertyTable(
-        AlignmentProperty('alignment'),
-        BooleanProperty('expand'),
-        FontProperty('font'),
-        DimensionProperty('height'),
-        DimensionProperty('left'),
-        Property('text'),
-        BooleanProperty('richText'),
-        DimensionProperty('top'),
-        DimensionProperty('width')),
-
-    model.FieldModel: PropertyTable(
-        AlignmentProperty('alignment'),
-        Property('attrName'),
-        BooleanProperty('richText'),
-        BooleanProperty('expand'),
-        FontProperty('font'),
-        DimensionProperty('height'),
-        DimensionProperty('left'),
-        DimensionProperty('top'),
-        DimensionProperty('width')),
-
-    model.FunctionModel: PropertyTable(
-        AlignmentProperty('alignment'),
-        BooleanProperty('expand'),
-        FontProperty('font'),
-        Property('func'),
-        BooleanProperty('richText'),
-        DimensionProperty('height'),
-        DimensionProperty('left'),
-        DimensionProperty('top'),
-        DimensionProperty('width')),
-
-    model.LineModel: PropertyTable(
-        DimensionProperty('height'),
-        DimensionProperty('left'),
-        DimensionProperty('top'),
-        DimensionProperty('width')),
-
-    model.BoxModel: PropertyTable(
-        DimensionProperty('height'),
-        DimensionProperty('left'),
-        DimensionProperty('top'),
-        DimensionProperty('width')),
-    
-    model.ImageModel: PropertyTable(
-        DimensionProperty('height'),
-        DimensionProperty('left'),
-        DimensionProperty('top'),
-        DimensionProperty('width'),
-        Property('fileName'))
+    model.ReportModel: {
+        'dataSet',
+        'font',
+        'margins',
+        'name',
+        'paperSize',
+        'title',
+        'grid_x_spacing',
+        'grid_y_spacing'
+    },
+    model.SectionModel: {
+        'columns',
+        'columnSpace'
+    },
+    model.BandModel: {
+        'expand',
+        'font',
+        'height'
+    },
+    model.DetailBandModel: {
+        'dataSet',
+        'expand',
+        'font',
+        'height'
+    },
+    model.LabelModel: {
+        'alignment',
+        'expand',
+        'font',
+        'height',
+        'left',
+        'text',
+        'richText',
+        'top',
+        'width'
+    },
+    model.FieldModel: {
+        'alignment',
+        'attrName',
+        'richText',
+        'expand',
+        'font',
+        'height',
+        'left',
+        'top',
+        'width'
+    },
+    model.FunctionModel: {
+        'alignment',
+        'expand',
+        'font',
+        'func',
+        'richText',
+        'height',
+        'left',
+        'top',
+        'width'
+    },
+    model.LineModel: {
+        'height',
+        'left',
+        'top',
+        'width'
+    },
+    model.BoxModel: {
+        'height',
+        'left',
+        'top',
+        'width'
+    },
+    model.ImageModel: {
+        'height',
+        'left',
+        'top',
+        'width',
+        'fileName'
     }
+}
+    
+    

@@ -20,7 +20,7 @@ from model import (ReportModel, BandModel, SectionModel, DetailBandModel,
     ElementModel, LabelModel, FieldModel,
     FunctionModel, LineModel, BoxModel, ImageModel, GroupModel)
 from view import ReportView, BandView, SectionView, grid
-from properties import property_tables
+from properties import PropertyTable, property_registry, property_tables
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -315,7 +315,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def select_element(self, element):
         self.selected = element
-        self.property_table = property_tables[type(element)]
+        property_names = [name
+                         for name in  property_tables[type(element)]]
+        property_names.sort()
+        property_list = [property_registry[property_name] 
+                         for property_name in  property_tables[type(element)]]
+        self.property_table = PropertyTable(*property_list)
         self.property_table.setModel(element)
         self.ui.properties.setModel(self.property_table)
         for row in range(0, self.property_table.rowCount()):
