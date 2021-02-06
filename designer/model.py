@@ -641,9 +641,11 @@ class ReportModel(ObservableObject):
             Generate Python code
         """
         s = (
-            "from PyQt4.QtGui import QPrinter, QFont\n"
+            "from PyQt5.QtGui import QFont\n"
+            "from PyQt5.QtPrintSupport import QPrinter\n"
             "from franq import *\n"
-            "\n"
+            "\n")
+        s += (
             "class " + self.name + "(Report):\n"
             "\n"
             "    def setup(self):\n"
