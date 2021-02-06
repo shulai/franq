@@ -146,8 +146,6 @@ class LabelModel(TextModel):
 
     def generate(self, padding):
         gen = self._generator('Label')
-        if self.font:
-            gen.param_font(self.font)
         gen.param('text', repr(self.text))
         return gen.generate(padding)
 
@@ -173,8 +171,6 @@ class FieldModel(TextModel):
 
     def generate(self, padding=0):
         gen = self._generator('Field')
-        if self.font:
-            gen.param_font(self.font)
         gen.param('attrName', repr(self.attrName))
         gen.param('formatStr', repr(self.format))
         return gen.generate(padding)
@@ -198,8 +194,6 @@ class FunctionModel(TextModel):
 
     def generate(self, padding=0):
         gen = self._generator('Function')
-        if self.font:
-            gen.param_font(self.font)
         gen.param('func', self.func)
         return gen.generate(padding)
 
