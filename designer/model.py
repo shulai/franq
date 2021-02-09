@@ -261,12 +261,11 @@ class ImageModel(ElementModel):
         return json
 
     def generate(self, padding=0):
-        gen = CallGenerator('Function',
+        gen = CallGenerator('Image',
             ('top', str(self.top)),
             ('left', str(self.left)),
             ('width', str(self.width)),
             ('height', str(self.height)),
-            *params
             )
         if self.fileName:
             gen.param('fileName', self.fileName)
@@ -378,7 +377,8 @@ class BandModel(ObservableObject):
         gen = CallGenerator("Band",
             ("height", str(self.height)),
             ("expand", repr(self.expand)))
-
+        #if self.dataSet:
+            #gen.param('dataSet', repr(self.dataSet))
         if self.font:
             gen.param_font(self.font)
         gen.param_list("elements",
@@ -430,6 +430,9 @@ class DetailBandModel(BandModel):
         gen = CallGenerator("DetailBand",
             ("height", str(self.height)),
             ("expand", repr(self.expand)))
+
+        if self.dataSet:
+            gen.param('dataSet', repr(self.dataSet))
 
         if self.font:
             gen.param_font(self.font)
@@ -558,6 +561,8 @@ class ReportModel(ObservableObject):
     def add_band(self, band_attr, band):
         if band_attr not in ('begin', 'summary', 'header', 'footer'):
             raise ValueError('Invalid band_attr')
+        print(self.margins)
+        band.left = self.margins[3]
         setattr(self, band_attr, band)
         band.parent = self
 
@@ -617,6 +622,7 @@ class ReportModel(ObservableObject):
             'title': self.title,
             'dataSet': self.dataSet,
             'paperSize': self.paperSize,
+            'margins': self.margins,
             'font': (
                 self.font.family(),
                 self.font.pointSize(),
@@ -643,6 +649,7 @@ class ReportModel(ObservableObject):
             Generate Python code
         """
         s = (
+            "import os.path\n"
             "from PyQt5.QtGui import QFont\n"
             "from PyQt5.QtPrintSupport import QPrinter\n"
             "from franq import *\n"
@@ -673,6 +680,8 @@ class ReportModel(ObservableObject):
                 self.font.weight(),
                 repr(self.font.italic())))
 
+        if self.dataSet:
+            s += "        self.dataSet= '" + self.dataSet + "'\n"
         if self.begin:
             s += "        self.begin = " + self.begin.generate(12) + "\n"
         if self.header:
