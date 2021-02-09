@@ -205,6 +205,11 @@ class LineModel(ElementModel):
         self.width = 20.0 * mm
         self.height = 20.0 * mm
 
+    def save(self):
+        json = super().save()
+        json['type'] = 'line'
+        return json
+
     def generate(self, padding=0):
         gen = CallGenerator('Function',
             ('top', str(self.top)),
@@ -224,6 +229,11 @@ class BoxModel(ElementModel):
         super().__init__()
         self.width = 20.0 * mm
         self.height = 20.0 * mm
+
+    def save(self):
+        json = super().save()
+        json['type'] = 'box'
+        return json
 
     def generate(self, padding=0):
         gen = CallGenerator('Function',
