@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import os
 from PyQt5.QtGui import QFont
 from qonda.mvc.observable import ObservableObject, ObservableListProxy
 import franq
@@ -268,7 +268,11 @@ class ImageModel(ElementModel):
             ('height', str(self.height)),
             )
         if self.fileName:
-            gen.param('fileName', self.fileName)
+            filename = self.fileName
+            if filename[0] in (os.sep, ):
+                gen.param('fileName', repr(filename))
+            else:
+                gen.param('fileName', 'os.path.join(os.path.dirname(__file__), ' + repr(filename) + ')')
         return gen.generate(padding)
 
 
