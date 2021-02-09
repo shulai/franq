@@ -211,15 +211,12 @@ class LineModel(ElementModel):
         return json
 
     def generate(self, padding=0):
-        gen = CallGenerator('Function',
+        gen = CallGenerator('Line',
             ('top', str(self.top)),
             ('left', str(self.left)),
             ('width', str(self.width)),
             ('height', str(self.height)),
-            *params
             )
-        if self.fileName:
-            gen.param('fileName', self.fileName)
         return gen.generate(padding)
 
 
@@ -236,15 +233,12 @@ class BoxModel(ElementModel):
         return json
 
     def generate(self, padding=0):
-        gen = CallGenerator('Function',
+        gen = CallGenerator('Box',
             ('top', str(self.top)),
             ('left', str(self.left)),
             ('width', str(self.width)),
             ('height', str(self.height)),
-            *params
             )
-        if self.fileName:
-            gen.param('fileName', self.fileName)
         return gen.generate(padding)
 
 
