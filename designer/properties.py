@@ -1,7 +1,7 @@
 
 from PyQt5.QtCore import Qt, QAbstractTableModel
 from PyQt5 import QtGui, QtWidgets
-from qonda.mvc.adapters import ValueListAdapter
+from qonda.mvc.adapters import ValueListAdapter, PythonObjectRole
 from qonda.mvc.delegates import ComboBoxDelegate
 import model
 from dialogs import MarginsDialog, FontDialog
@@ -93,7 +93,6 @@ class PaperSizeProperty(Property):
             return self._paperSizes[v]
 
     def propertyInverseTransform(self, v):
-        print('pit', v)
         return self._paperSizes.index(v)
 
 
@@ -158,7 +157,7 @@ class PropertyTable(QAbstractTableModel):
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, PythonObjectRole):
             if index.column() == 0:
                 return self._properties[index.row()].propertyName
             elif index.column() == 1:
@@ -187,7 +186,7 @@ class PropertyTable(QAbstractTableModel):
             return Qt.ItemIsEditable | Qt.ItemIsEnabled
 
     def setData(self, index, value, role=Qt.EditRole):
-        if role == Qt.EditRole and index.column() == 1:
+        if role in (Qt.EditRole, PythonObjectRole) and index.column() == 1:
             prop = self._properties[index.row()]
             value = prop.propertyInverseTransform(value)
             setattr(self._model,
