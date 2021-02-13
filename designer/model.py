@@ -654,10 +654,13 @@ class ReportModel(ObservableObject):
         """
         s = (
             "import os.path\n"
-            "from PyQt5.QtGui import QFont\n"
+            "from PyQt5.QtCore import Qt\n"
+            "from PyQt5.QtGui import QFont, QTextOption\n"
             "from PyQt5.QtPrintSupport import QPrinter\n"
-            "from franq import *\n"
-            "\n")
+            "from franq import (\n"
+            "   Report, Section, Band, DetailBand, Label, Field, Function, Line, Box, Image\n"
+            "   )\n"
+            "\n\n")
         s += (
             "class " + self.name + "(Report):\n"
             "\n"
