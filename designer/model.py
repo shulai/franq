@@ -58,16 +58,17 @@ class ElementModel(ObservableObject):
         self.left = json['left']
         self.width = json['width']
         self.height = json['height']
-        # TODO: Load values if available
-        self.pen = None
-        self.background = None
+        self.pen = json.get('pen')
+        self.background = json.get('background')
 
     def save(self):
         json = {
             'top': self.top,
             'left': self.left,
             'width': self.width,
-            'height': self.height
+            'height': self.height,
+            'pen': self.pen,
+            'background': self.background
             }
         return json
 
@@ -82,21 +83,21 @@ class TextModel(ElementModel):
         self.width = 20 * mm
         self.height = 4 * mm
         self.expand = False
-        self.alignment = False
+        self.alignment = 'Left'
         self.richText = False
 
     def load(self, json):
         super().load(json)
         if json.get('font'):
             self.font = QFont(*json['font'])
-        if json.get('alignment'):
-            self.alignment = json['alignment']
-        if json.get('richText'):
-            self.richText = json['richText']
+        self.alignment = json.get('alignment', 'Left')
+        self.richText = json.get('richText', False)
 
     def save(self):
         json = super().save()
         json['expand'] = self.expand
+        json['alignment'] = self.alignment
+        json['richText'] = self.richText
         if self.font:
             json['font'] = (
                 self.font.family(),
@@ -117,10 +118,10 @@ class TextModel(ElementModel):
         if self.alignment:
             options = (
                 {
-                    'Left': 'Qt::AlignLeft',
-                    'Center': 'Qt::AlignCenter',
-                    'Right': 'Qt::AlignRight',
-                    'Justify': 'Qt::AlignJustify',
+                    'Left': 'Qt.AlignLeft',
+                    'Center': 'Qt.AlignCenter',
+                    'Right': 'Qt.AlignRight',
+                    'Justify': 'Qt.AlignJustify',
                 }[self.alignment])
             gen.param('textOptions', 'QTextOption(' + options + ')')
         if self.font:
@@ -252,7 +253,7 @@ class ImageModel(ElementModel):
 
     def load(self, json):
         super().load(json)
-        self.fileName = json['fileName']
+        self.fileName = json.get('fileName')
 
     def save(self):
         json = super().save()
@@ -329,7 +330,7 @@ class BandModel(ObservableObject):
 
     def add_band(self, band_attr, band):
         if band_attr != 'child':
-            raise ValueError('Invalid band_attr')
+            raise ValueError('Invalid band_attr')   
         self._add_band(band_attr, band)
 
     def remove_band(self, band_attr):
@@ -382,7 +383,7 @@ class BandModel(ObservableObject):
             ("height", str(self.height)),
             ("expand", repr(self.expand)))
         #if self.dataSet:
-            #gen.param('dataSet', repr(self.dataSet))
+        #    gen.param('dataSet', repr(self.dataSet))
         if self.font:
             gen.param_font(self.font)
         gen.param_list("elements",
