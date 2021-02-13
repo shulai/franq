@@ -349,6 +349,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def select_element(self, item):
         self.scene.clearSelection()
         item.setSelected(True)
+        self.selected = item
         
     def update_property_view(self):
         selection = self.scene.selectedItems()
@@ -490,7 +491,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def select_item(self):
         try:
             item = self.scene.selectedItems()[0]
-            self.select_element(item)
+            # Bands and reports select separately
+            if not isinstance(item.model, ElementModel):
+                self.select_element(item)
         except IndexError:
             pass
 
@@ -521,7 +524,7 @@ class MainWindow(QtWidgets.QMainWindow):
         selection = self.scene.selectedItems()
         assert(len(selection)==1)
         view_item = selection[0]
-        self.select_element(view_item.parent)
+        self.select_element(view_item.parentItem())
         element = view_item.model
         element.parent.remove_element(element)
 
@@ -579,62 +582,62 @@ class MainWindow(QtWidgets.QMainWindow):
         self.model.add_section(section)
 
     def remove_section(self):
-        section = self.selected
+        section = self.selected.model
         self.model.remove_section(section)
 
     def add_section_detailband(self):
-        section = self.selected
+        section = self.selected.model
         band = DetailBandModel()
         section.add_band(band)
 
     def add_section_band(self):
-        section = self.selected
+        section = self.selected.model
         band = BandModel('Band')
         section.add_band(band)
 
     def remove_section_band(self):
-        band = self.selected
+        band = self.selected.model
         section = band.parent
         section.remove_band(band)
 
     def add_detail_begin_band(self):
-        detail_band = self.selected
+        detail_band = self.selected.model
         assert(detail_band.detailBegin is None)
         band = BandModel('Detail Begin Band')
         detail_band.detailBegin = band
 
     def add_detail_header_band(self):
-        detail_band = self.selected
+        detail_band = self.selected.model
         assert(detail_band.columnHeader is None)
         band = BandModel('Detail Column Header')
         detail_band.columnHeader = band
 
     def add_detail_footer_band(self):
-        detail_band = self.selected
+        detail_band = self.selected.model
         assert(detail_band.columnFooter is None)
         band = BandModel('Detail Column Footer')
         detail_band.columnFooter = band
 
     def add_detail_summary_band(self):
-        detail_band = self.selected
+        detail_band = self.selected.model
         assert(detail_band.detailSummary is None)
         band = BandModel('Detail Summary Band')
         detail_band.detailSummary = band
 
     def add_detail_group(self):
-        detail_band = self.selected
+        detail_band = self.selected.model
         assert(detail_band.detailSummary is None)
         group = GroupModel()
         detail_band.groups.append(group)
 
     def add_child_band(self):
-        band = self.selected
+        band = self.selected.model
         assert(band.child is None)
         child_band = BandModel('Child Band')
         band.add_band('child', child_band)
 
     def remove_child_band(self):
-        self.selected.parent.remove_band('child')
+        self.selected.model.parent.remove_band('child')
 
     @pyqtSlot()
     def on_action_Copy_triggered(self):
