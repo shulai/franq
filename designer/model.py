@@ -388,6 +388,8 @@ class BandModel(ObservableObject):
         gen.param_list("elements",
                        [el.generate(padding + 4) for el in self.elements],
                        padding)
+        if self.child:
+            gen.param('child', self.child.generate(padding + 4))
         return gen.generate(padding)
 
 
@@ -448,6 +450,9 @@ class DetailBandModel(BandModel):
                        [g.generate(padding + 4) 
                        for g in self.groups],
                        padding)
+        if self.child:
+            gen.param('child', self.child.generate(padding + 4))
+
         return gen.generate(padding)
 
 
