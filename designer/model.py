@@ -20,7 +20,7 @@ class CallGenerator:
 
     def param_font(self, font):
         self.param(
-            'font', "QFont({}, {}, {}, {})\n".format(
+            'font', "QFont({}, {}, {}, {})".format(
                 repr(font.family()),
                 font.pointSize(),
                 font.weight(),
