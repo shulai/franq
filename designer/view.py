@@ -193,7 +193,8 @@ class BandView(QtWidgets.QGraphicsRectItem):
         return child
 
     def _remove_child(self, pos):
-        child = self._children.pop(pos)
+        child = self._element_map[self.model.elements[pos]]
+        self._children.remove(child)
         child.setParentItem(None)
         self.scene().removeItem(child)
         del self._element_map[child.model]
@@ -300,7 +301,7 @@ class BandView(QtWidgets.QGraphicsRectItem):
         elif event_type == 'insert':
             i = event_data
             self._add_child(elements[i], i)
-        elif event_type == 'delitem':
+        elif event_type == 'before_delitem':
             index = event_data
             self._remove_child(index)
 
